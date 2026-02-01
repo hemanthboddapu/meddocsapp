@@ -112,35 +112,24 @@ class PatientDetailActivity : AppCompatActivity() {
 
         fileAdapter = FileAdapter(
             onFileClicked = { patientFile ->
-                val fileUri = Uri.parse(patientFile.uri)
-                if (patientFile.mimeType.startsWith("image/")) {
-                    val intent = Intent(this, ImageViewActivity::class.java)
-                    intent.putExtra(ImageViewActivity.EXTRA_IMAGE_URI, fileUri.toString())
-                    startActivity(intent)
-                } else {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(fileUri, patientFile.mimeType)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    startActivity(Intent.createChooser(intent, "Open file"))
-                }
+                openFile(patientFile)
             },
             onDeleteClicked = { patientFile ->
+                // Move to recycle bin instead of permanent delete
                 AlertDialog.Builder(this)
                     .setTitle("Delete File")
-                    .setMessage("Are you sure you want to delete this file?")
+                    .setMessage("Move this file to recycle bin?")
                     .setPositiveButton("Delete") { _, _ ->
-                        patientViewModel.delete(patientFile)
-                        val file = File(Uri.parse(patientFile.uri).path!!)
-                        if (file.exists()) {
-                            file.delete()
-                        }
+                        patientViewModel.moveFileToRecycleBin(patientFile)
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
             },
             onRenameClicked = { patientFile ->
                 showRenameDialog(patientFile)
+            },
+            onShareClicked = { patientFile ->
+                shareFile(patientFile)
             }
         )
         filesRecyclerView.adapter = fileAdapter
@@ -225,6 +214,136 @@ class PatientDetailActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    /**
+     * Open a file with the appropriate external app
+     */
+    private fun openFile(patientFile: PatientFile) {
+        if (patientFile.mimeType.startsWith("image/")) {
+            // Open images in built-in viewer
+            val intent = Intent(this, ImageViewActivity::class.java)
+            intent.putExtra(ImageViewActivity.EXTRA_IMAGE_URI, patientFile.uri)
+            startActivity(intent)
+        } else {
+            // For non-image files, use FileProvider
+            try {
+                val file = File(Uri.parse(patientFile.uri).path!!)
+                if (!file.exists()) {
+                    Toast.makeText(this, "File not found", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                val contentUri = FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.provider",
+                    file
+                )
+
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(contentUri, patientFile.mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                // Check if any app can handle this intent
+                val activities = packageManager.queryIntentActivities(intent, 0)
+                if (activities.isNotEmpty()) {
+                    startActivity(intent)
+                } else {
+                    // Try with a generic mime type
+                    val genericIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(contentUri, "*/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    val genericActivities = packageManager.queryIntentActivities(genericIntent, 0)
+                    if (genericActivities.isNotEmpty()) {
+                        startActivity(Intent.createChooser(genericIntent, "Open with"))
+                    } else {
+                        Toast.makeText(this, "No app found to open ${patientFile.mimeType} files", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e("PatientDetailActivity", "Error opening file: ${e.message}", e)
+                Toast.makeText(this, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /**
+     * Share a single file with patient info
+     */
+    private fun shareFile(patientFile: PatientFile) {
+        try {
+            val file = File(Uri.parse(patientFile.uri).path!!)
+            if (!file.exists()) {
+                Toast.makeText(this, "File not found", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val contentUri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+
+            val patientInfo = buildPatientInfoText()
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = patientFile.mimeType
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+                putExtra(Intent.EXTRA_TEXT, patientInfo)
+                putExtra(Intent.EXTRA_SUBJECT, "Patient File: ${patient?.name}")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share file"))
+        } catch (e: Exception) {
+            AppLogger.e("PatientDetailActivity", "Error sharing file: ${e.message}", e)
+            Toast.makeText(this, "Error sharing file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Share multiple files with patient info
+     */
+    private fun shareMultipleFiles(files: List<PatientFile>) {
+        try {
+            val uris = ArrayList<Uri>()
+            for (patientFile in files) {
+                val file = File(Uri.parse(patientFile.uri).path!!)
+                if (file.exists()) {
+                    val contentUri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+                    uris.add(contentUri)
+                }
+            }
+
+            if (uris.isEmpty()) {
+                Toast.makeText(this, "No files to share", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val patientInfo = buildPatientInfoText()
+
+            val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = "*/*"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                putExtra(Intent.EXTRA_TEXT, patientInfo)
+                putExtra(Intent.EXTRA_SUBJECT, "Patient Files: ${patient?.name}")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share files"))
+        } catch (e: Exception) {
+            AppLogger.e("PatientDetailActivity", "Error sharing files: ${e.message}", e)
+            Toast.makeText(this, "Error sharing files", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun buildPatientInfoText(): String {
+        val sb = StringBuilder()
+        sb.append("Patient: ${patient?.name}\n")
+        if (!patient?.patientIdNumber.isNullOrEmpty()) {
+            sb.append("Patient ID: ${patient?.patientIdNumber}\n")
+        }
+        sb.append("Bed Number: ${patient?.bedNumber}\n")
+        sb.append("Status: ${patient?.status}")
+        return sb.toString()
     }
 
     private fun openCompareActivity() {
@@ -349,7 +468,8 @@ class PatientDetailActivity : AppCompatActivity() {
     private class FileAdapter(
         private val onFileClicked: (PatientFile) -> Unit,
         private val onDeleteClicked: (PatientFile) -> Unit,
-        private val onRenameClicked: (PatientFile) -> Unit
+        private val onRenameClicked: (PatientFile) -> Unit,
+        private val onShareClicked: (PatientFile) -> Unit
     ) :
         ListAdapter<PatientFile, FileAdapter.FileViewHolder>(FilesDiffCallback()) {
 
@@ -359,24 +479,53 @@ class PatientDetailActivity : AppCompatActivity() {
             private val fileThumbnail: ImageView = itemView.findViewById(R.id.file_thumbnail)
             private val deleteFileButton: View = itemView.findViewById(R.id.delete_file_button)
             private val renameFileButton: View = itemView.findViewById(R.id.rename_file_button)
+            private val shareFileButton: View? = itemView.findViewById(R.id.share_file_button)
 
-            fun bind(file: PatientFile, onFileClicked: (PatientFile) -> Unit, onDeleteClicked: (PatientFile) -> Unit, onRenameClicked: (PatientFile) -> Unit) {
+            fun bind(
+                file: PatientFile,
+                onFileClicked: (PatientFile) -> Unit,
+                onDeleteClicked: (PatientFile) -> Unit,
+                onRenameClicked: (PatientFile) -> Unit,
+                onShareClicked: (PatientFile) -> Unit
+            ) {
                 fileNameTextView.text = file.fileName
                 val formattedDate = SimpleDateFormat.getDateInstance().format(Date(file.createdAt))
                 fileDetailsTextView.text = "${android.text.format.Formatter.formatShortFileSize(itemView.context, file.size)} - $formattedDate"
-                if (file.mimeType.startsWith("image/")) {
-                    Glide.with(itemView.context)
-                        .load(Uri.parse(file.uri))
-                        .centerCrop()
-                        .into(fileThumbnail)
-                } else {
-                    // Set a generic file icon for non-image files
-                    fileThumbnail.setImageResource(R.drawable.ic_file)
-                    fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+
+                // Set thumbnail based on file type
+                when {
+                    file.mimeType.startsWith("image/") -> {
+                        Glide.with(itemView.context)
+                            .load(Uri.parse(file.uri))
+                            .centerCrop()
+                            .into(fileThumbnail)
+                    }
+                    file.mimeType.startsWith("video/") -> {
+                        fileThumbnail.setImageResource(R.drawable.ic_video)
+                        fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+                    }
+                    file.mimeType == "application/pdf" -> {
+                        fileThumbnail.setImageResource(R.drawable.ic_pdf)
+                        fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+                    }
+                    file.mimeType.contains("word") || file.mimeType.contains("document") -> {
+                        fileThumbnail.setImageResource(R.drawable.ic_doc)
+                        fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+                    }
+                    file.mimeType.contains("presentation") || file.mimeType.contains("powerpoint") -> {
+                        fileThumbnail.setImageResource(R.drawable.ic_ppt)
+                        fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+                    }
+                    else -> {
+                        fileThumbnail.setImageResource(R.drawable.ic_file)
+                        fileThumbnail.scaleType = ImageView.ScaleType.CENTER
+                    }
                 }
+
                 itemView.setOnClickListener { onFileClicked(file) }
                 deleteFileButton.setOnClickListener { onDeleteClicked(file) }
                 renameFileButton.setOnClickListener { onRenameClicked(file) }
+                shareFileButton?.setOnClickListener { onShareClicked(file) }
             }
         }
 
@@ -387,7 +536,7 @@ class PatientDetailActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
-            holder.bind(getItem(position), onFileClicked, onDeleteClicked, onRenameClicked)
+            holder.bind(getItem(position), onFileClicked, onDeleteClicked, onRenameClicked, onShareClicked)
         }
 
         private class FilesDiffCallback : DiffUtil.ItemCallback<PatientFile>() {

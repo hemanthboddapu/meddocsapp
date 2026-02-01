@@ -28,4 +28,9 @@
 
     <!-- Background -->
     <color name="backgroundColor">#FAFAFA</color>
+
+    <!-- Avatar colors based on gender -->
+    <color name="avatar_male">#42A5F5</color>
+    <color name="avatar_female">#EC407A</color>
+    <color name="avatar_default">#78909C</color>
 </resources>

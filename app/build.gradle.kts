@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.glide)
     implementation(libs.photoview)
+    implementation("com.google.code.gson:gson:2.10.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

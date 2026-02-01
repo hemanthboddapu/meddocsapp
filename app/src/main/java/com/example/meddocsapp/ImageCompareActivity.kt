@@ -1,8 +1,14 @@
 package com.example.meddocsapp
 
+import android.content.ContentValues
+import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -23,8 +29,24 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
+import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+/**
+ * Activity for comparing two patient images side-by-side.
+ * Features: Image rotation, landscape mode toggle, save comparison.
+ */
 class ImageCompareActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_PATIENT = "com.example.meddocsapp.EXTRA_PATIENT"
+        const val EXTRA_LEFT_IMAGE_URI = "com.example.meddocsapp.EXTRA_LEFT_IMAGE_URI"
+        const val EXTRA_RIGHT_IMAGE_URI = "com.example.meddocsapp.EXTRA_RIGHT_IMAGE_URI"
+        private const val TAG = "ImageCompareActivity"
+    }
 
     private lateinit var toolbar: MaterialToolbar
     private lateinit var leftImageView: PhotoView
@@ -36,15 +58,21 @@ class ImageCompareActivity : AppCompatActivity() {
     private lateinit var selectLeftButton: MaterialButton
     private lateinit var selectRightButton: MaterialButton
     private lateinit var swapButton: MaterialButton
-    private lateinit var resetZoomButton: MaterialButton
-    private lateinit var syncZoomSwitch: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var rotateLeftButton: MaterialButton
+    private lateinit var rotateRightButton: MaterialButton
+    private lateinit var landscapeButton: MaterialButton
+    private lateinit var saveComparisonButton: MaterialButton
     private lateinit var instructionsLayout: View
+    private lateinit var comparisonContainer: View
 
     private var patient: Patient? = null
     private var leftImage: PatientFile? = null
     private var rightImage: PatientFile? = null
     private var imageFiles: List<PatientFile> = emptyList()
-    private var syncZoom = true
+
+    private var leftRotation = 0f
+    private var rightRotation = 0f
+    private var isLandscape = false
 
     private val patientViewModel: PatientViewModel by viewModels {
         PatientViewModelFactory((application as MedDocsApplication).repository)
@@ -54,11 +82,12 @@ class ImageCompareActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_image_compare)
 
+        AppLogger.d(TAG, "onCreate")
+
         initViews()
         setupToolbar()
         loadPatientData()
         setupClickListeners()
-        setupZoomSync()
     }
 
     private fun initViews() {
@@ -72,9 +101,16 @@ class ImageCompareActivity : AppCompatActivity() {
         selectLeftButton = findViewById(R.id.select_left_button)
         selectRightButton = findViewById(R.id.select_right_button)
         swapButton = findViewById(R.id.swap_button)
-        resetZoomButton = findViewById(R.id.reset_zoom_button)
-        syncZoomSwitch = findViewById(R.id.sync_zoom_switch)
         instructionsLayout = findViewById(R.id.instructions_layout)
+
+        // Get the parent layout containing both image cards for screenshot
+        comparisonContainer = leftImageCard.parent as View
+
+        // New buttons - may not exist in old layout, handle gracefully
+        rotateLeftButton = findViewById(R.id.rotate_left_button) ?: MaterialButton(this)
+        rotateRightButton = findViewById(R.id.rotate_right_button) ?: MaterialButton(this)
+        landscapeButton = findViewById(R.id.landscape_button) ?: MaterialButton(this)
+        saveComparisonButton = findViewById(R.id.save_comparison_button) ?: MaterialButton(this)
     }
 
     private fun setupToolbar() {
@@ -93,12 +129,20 @@ class ImageCompareActivity : AppCompatActivity() {
 
         patient?.let { p ->
             supportActionBar?.subtitle = p.name
+            AppLogger.d(TAG, "Loading images for patient: ${p.name}")
+
             patientViewModel.getImageFilesForPatient(p.id).observe(this) { files ->
                 imageFiles = files ?: emptyList()
+                AppLogger.d(TAG, "Found ${imageFiles.size} image files")
                 if (imageFiles.size < 2) {
                     Toast.makeText(this, "Need at least 2 images to compare", Toast.LENGTH_LONG).show()
                 }
             }
+        } ?: run {
+            AppLogger.e(TAG, "No patient data received")
+            Toast.makeText(this, "Error: No patient data", Toast.LENGTH_SHORT).show()
+            finish()
+            return
         }
 
         // Check if images were passed directly
@@ -120,24 +164,74 @@ class ImageCompareActivity : AppCompatActivity() {
         rightImageCard.setOnClickListener { if (rightImage == null) showImagePicker(false) }
 
         swapButton.setOnClickListener { swapImages() }
-        resetZoomButton.setOnClickListener { resetZoom() }
 
-        syncZoomSwitch.setOnCheckedChangeListener { _, isChecked ->
-            syncZoom = isChecked
-        }
+        rotateLeftButton.setOnClickListener { rotateLeftImage() }
+        rotateRightButton.setOnClickListener { rotateRightImage() }
+        landscapeButton.setOnClickListener { toggleLandscape() }
+        saveComparisonButton.setOnClickListener { saveComparison() }
     }
 
-    private fun setupZoomSync() {
-        leftImageView.setOnMatrixChangeListener { rect ->
-            if (syncZoom && leftImage != null && rightImage != null) {
-                rightImageView.setScale(leftImageView.scale, false)
-            }
+    private fun rotateLeftImage() {
+        leftRotation = (leftRotation + 90f) % 360f
+        leftImageView.rotation = leftRotation
+    }
+
+    private fun rotateRightImage() {
+        rightRotation = (rightRotation + 90f) % 360f
+        rightImageView.rotation = rightRotation
+    }
+
+    private fun toggleLandscape() {
+        isLandscape = !isLandscape
+        requestedOrientation = if (isLandscape) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+        landscapeButton.text = if (isLandscape) "Portrait" else "Landscape"
+    }
+
+    private fun saveComparison() {
+        if (leftImage == null || rightImage == null) {
+            Toast.makeText(this, "Select both images first", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        rightImageView.setOnMatrixChangeListener { rect ->
-            if (syncZoom && leftImage != null && rightImage != null) {
-                leftImageView.setScale(rightImageView.scale, false)
+        try {
+            // Create a bitmap from the comparison container
+            val bitmap = Bitmap.createBitmap(
+                comparisonContainer.width,
+                comparisonContainer.height,
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            comparisonContainer.draw(canvas)
+
+            // Save to patient's folder
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fileName = "comparison_${timestamp}.jpg"
+
+            val file = File(filesDir, fileName)
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
             }
+
+            // Add to patient's files
+            val patientFile = PatientFile(
+                patientId = patient!!.id,
+                uri = Uri.fromFile(file).toString(),
+                mimeType = "image/jpeg",
+                fileName = fileName,
+                size = file.length(),
+                createdAt = System.currentTimeMillis()
+            )
+            patientViewModel.insertFile(patientFile)
+
+            Toast.makeText(this, "Comparison saved to patient folder", Toast.LENGTH_SHORT).show()
+            AppLogger.d(TAG, "Comparison saved: $fileName")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error saving comparison", e)
+            Toast.makeText(this, "Error saving comparison", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -147,47 +241,72 @@ class ImageCompareActivity : AppCompatActivity() {
             return
         }
 
-        val dialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.dialog_image_picker, null)
+        try {
+            val dialog = BottomSheetDialog(this)
+            val view = layoutInflater.inflate(R.layout.dialog_image_picker, null)
 
-        val recyclerView = view.findViewById<RecyclerView>(R.id.images_recycler_view)
-        val titleText = view.findViewById<TextView>(R.id.picker_title)
-        titleText.text = if (isLeft) "Select Before Image" else "Select After Image"
+            val recyclerView = view.findViewById<RecyclerView>(R.id.images_recycler_view)
+            val titleText = view.findViewById<TextView>(R.id.picker_title)
+            titleText.text = if (isLeft) "Select Before Image" else "Select After Image"
 
-        val adapter = ImagePickerAdapter { selectedFile ->
-            if (isLeft) {
-                leftImage = selectedFile
-                loadLeftImage(selectedFile.uri)
-                leftImageLabel.text = selectedFile.fileName
-            } else {
-                rightImage = selectedFile
-                loadRightImage(selectedFile.uri)
-                rightImageLabel.text = selectedFile.fileName
+            val adapter = ImagePickerAdapter { selectedFile ->
+                try {
+                    if (isLeft) {
+                        leftImage = selectedFile
+                        leftRotation = 0f
+                        leftImageView.rotation = 0f
+                        loadLeftImage(selectedFile.uri)
+                        leftImageLabel.text = selectedFile.fileName
+                    } else {
+                        rightImage = selectedFile
+                        rightRotation = 0f
+                        rightImageView.rotation = 0f
+                        loadRightImage(selectedFile.uri)
+                        rightImageLabel.text = selectedFile.fileName
+                    }
+                    updateInstructionsVisibility()
+                    AppLogger.d(TAG, "Selected image: ${selectedFile.fileName}")
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Error loading selected image", e)
+                    Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
             }
-            updateInstructionsVisibility()
-            dialog.dismiss()
+
+            recyclerView.layoutManager = GridLayoutManager(this, 3)
+            recyclerView.adapter = adapter
+            adapter.submitList(imageFiles.toList())
+
+            dialog.setContentView(view)
+            dialog.show()
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error showing image picker", e)
+            Toast.makeText(this, "Error opening image picker", Toast.LENGTH_SHORT).show()
         }
-
-        recyclerView.layoutManager = GridLayoutManager(this, 3)
-        recyclerView.adapter = adapter
-        adapter.submitList(imageFiles)
-
-        dialog.setContentView(view)
-        dialog.show()
     }
 
     private fun loadLeftImage(uri: String) {
-        Glide.with(this)
-            .load(Uri.parse(uri))
-            .into(leftImageView)
-        instructionsLayout.visibility = View.GONE
+        try {
+            Glide.with(this)
+                .load(Uri.parse(uri))
+                .error(R.drawable.ic_file)
+                .into(leftImageView)
+            instructionsLayout.visibility = View.GONE
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error loading left image", e)
+        }
     }
 
     private fun loadRightImage(uri: String) {
-        Glide.with(this)
-            .load(Uri.parse(uri))
-            .into(rightImageView)
-        instructionsLayout.visibility = View.GONE
+        try {
+            Glide.with(this)
+                .load(Uri.parse(uri))
+                .error(R.drawable.ic_file)
+                .into(rightImageView)
+            instructionsLayout.visibility = View.GONE
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error loading right image", e)
+        }
     }
 
     private fun updateInstructionsVisibility() {
@@ -201,6 +320,7 @@ class ImageCompareActivity : AppCompatActivity() {
     private fun swapImages() {
         val tempImage = leftImage
         val tempLabel = leftImageLabel.text
+        val tempRotation = leftRotation
 
         leftImage = rightImage
         rightImage = tempImage
@@ -208,23 +328,28 @@ class ImageCompareActivity : AppCompatActivity() {
         leftImageLabel.text = rightImageLabel.text
         rightImageLabel.text = tempLabel
 
+        leftRotation = rightRotation
+        rightRotation = tempRotation
+
+        leftImageView.rotation = leftRotation
+        rightImageView.rotation = rightRotation
+
         // Swap the actual images
-        if (leftImage != null) {
-            Glide.with(this).load(Uri.parse(leftImage!!.uri)).into(leftImageView)
-        } else {
-            leftImageView.setImageResource(R.drawable.ic_add_photo)
-        }
+        try {
+            if (leftImage != null) {
+                Glide.with(this).load(Uri.parse(leftImage!!.uri)).into(leftImageView)
+            } else {
+                leftImageView.setImageResource(R.drawable.ic_add_photo)
+            }
 
-        if (rightImage != null) {
-            Glide.with(this).load(Uri.parse(rightImage!!.uri)).into(rightImageView)
-        } else {
-            rightImageView.setImageResource(R.drawable.ic_add_photo)
+            if (rightImage != null) {
+                Glide.with(this).load(Uri.parse(rightImage!!.uri)).into(rightImageView)
+            } else {
+                rightImageView.setImageResource(R.drawable.ic_add_photo)
+            }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error swapping images", e)
         }
-    }
-
-    private fun resetZoom() {
-        leftImageView.setScale(1f, true)
-        rightImageView.setScale(1f, true)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -257,7 +382,9 @@ class ImageCompareActivity : AppCompatActivity() {
         }
     }
 
-    // Image Picker Adapter
+    /**
+     * Adapter for image picker grid in bottom sheet dialog.
+     */
     private class ImagePickerAdapter(
         private val onImageSelected: (PatientFile) -> Unit
     ) : ListAdapter<PatientFile, ImagePickerAdapter.ImageViewHolder>(ImageDiffCallback()) {
@@ -275,24 +402,23 @@ class ImageCompareActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
             val file = getItem(position)
-            Glide.with(holder.itemView.context)
-                .load(Uri.parse(file.uri))
-                .centerCrop()
-                .into(holder.imageView)
-            holder.nameText.text = file.fileName
-            holder.itemView.setOnClickListener { onImageSelected(file) }
+            try {
+                Glide.with(holder.itemView.context)
+                    .load(Uri.parse(file.uri))
+                    .centerCrop()
+                    .error(R.drawable.ic_file)
+                    .into(holder.imageView)
+                holder.nameText.text = file.fileName
+                holder.itemView.setOnClickListener { onImageSelected(file) }
+            } catch (e: Exception) {
+                holder.imageView.setImageResource(R.drawable.ic_file)
+            }
         }
 
         private class ImageDiffCallback : DiffUtil.ItemCallback<PatientFile>() {
             override fun areItemsTheSame(oldItem: PatientFile, newItem: PatientFile) = oldItem.id == newItem.id
             override fun areContentsTheSame(oldItem: PatientFile, newItem: PatientFile) = oldItem == newItem
         }
-    }
-
-    companion object {
-        const val EXTRA_PATIENT = "com.example.meddocsapp.EXTRA_PATIENT"
-        const val EXTRA_LEFT_IMAGE_URI = "com.example.meddocsapp.EXTRA_LEFT_IMAGE_URI"
-        const val EXTRA_RIGHT_IMAGE_URI = "com.example.meddocsapp.EXTRA_RIGHT_IMAGE_URI"
     }
 }
 

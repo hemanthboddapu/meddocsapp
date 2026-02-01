@@ -19,25 +19,12 @@
         android:gravity="center_vertical">
 
         <!-- Avatar Circle -->
-        <FrameLayout
+        <ImageView
+            android:id="@+id/avatar_image"
             android:layout_width="48dp"
-            android:layout_height="48dp">
-
-            <View
-                android:id="@+id/avatar_background"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/circle_avatar_background" />
-
-            <TextView
-                android:id="@+id/avatar_text"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-        </FrameLayout>
+            android:layout_height="48dp"
+            android:src="@drawable/avatar_default"
+            android:contentDescription="Patient avatar" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -76,6 +63,18 @@
             android:textColor="@color/white"
             android:textSize="12sp"
             android:textStyle="bold" />
+
+        <!-- Quick Discharge Button -->
+        <ImageView
+            android:id="@+id/quick_discharge_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_discharged"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Quick discharge"
+            android:visibility="gone"
+            android:padding="4dp" />
 
     </LinearLayout>
 

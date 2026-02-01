@@ -62,23 +62,35 @@
 
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/rename_file_button"
-            style="@style/Widget.Material3.Button.IconButton"
+        <ImageButton
+            android:id="@+id/share_file_button"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:contentDescription="Rename file"
-            app:icon="@drawable/ic_edit"
-            app:iconTint="@color/textSecondary" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Share file"
+            android:src="@drawable/ic_share"
+            android:padding="8dp"
+            app:tint="@color/textSecondary" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/delete_file_button"
-            style="@style/Widget.Material3.Button.IconButton"
+        <ImageButton
+            android:id="@+id/rename_file_button"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Rename file"
+            android:src="@drawable/ic_edit"
+            android:padding="8dp"
+            app:tint="@color/textSecondary" />
+
+        <ImageButton
+            android:id="@+id/delete_file_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Delete file"
-            app:icon="@drawable/ic_delete"
-            app:iconTint="@color/textSecondary" />
+            android:src="@drawable/ic_delete"
+            android:padding="8dp"
+            app:tint="@color/textSecondary" />
 
     </LinearLayout>
 

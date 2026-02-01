@@ -1,5 +1,6 @@
 package com.example.meddocsapp
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -7,12 +8,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /**
  * Unit tests for PatientViewModel
  */
 class PatientViewModelTest {
+
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private lateinit var fakePatientDao: FakePatientDao
     private lateinit var fakePatientFileDao: FakePatientFileDao
@@ -133,11 +138,24 @@ class PatientViewModelTest {
 
         override fun getAllPatients(): Flow<List<Patient>> = patientsFlow
 
+        override fun getActivePatients(): Flow<List<Patient>> {
+            return patientsFlow.map { patients ->
+                patients.filter { it.status == "Active" }
+            }
+        }
+
+        override fun getDischargedPatients(): Flow<List<Patient>> {
+            return patientsFlow.map { patients ->
+                patients.filter { it.status == "Discharged" }
+            }
+        }
+
         override fun searchPatients(query: String): Flow<List<Patient>> {
             return patientsFlow.map { patients ->
                 patients.filter {
                     it.name.contains(query, ignoreCase = true) ||
-                    it.bedNumber.contains(query, ignoreCase = true)
+                    it.bedNumber.contains(query, ignoreCase = true) ||
+                    it.patientIdNumber.contains(query, ignoreCase = true)
                 }
             }
         }
@@ -148,6 +166,18 @@ class PatientViewModelTest {
         }
 
         override fun getFileCount(): Flow<Int> = flowOf(insertedPatients.size)
+
+        override fun getActivePatientCount(): Flow<Int> {
+            return patientsFlow.map { patients ->
+                patients.count { it.status == "Active" }
+            }
+        }
+
+        override fun getDischargedPatientCount(): Flow<Int> {
+            return patientsFlow.map { patients ->
+                patients.count { it.status == "Discharged" }
+            }
+        }
     }
 
     class FakePatientFileDao : PatientFileDao {

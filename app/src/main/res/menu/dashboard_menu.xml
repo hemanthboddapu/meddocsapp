@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_recycle_bin"
+        android:icon="@drawable/ic_delete"
+        android:title="Recycle Bin"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_developer_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Developer Settings"
+        app:showAsAction="never" />
+</menu>

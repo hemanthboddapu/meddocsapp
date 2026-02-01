@@ -169,7 +169,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="• Select images using the buttons below\n• Pinch to zoom both images simultaneously\n• Use Swap to switch image positions\n• Toggle sync zoom to zoom independently"
+                android:text="• Select images using the buttons below\n• Pinch to zoom each image independently\n• Use Rotate to adjust image orientation\n• Save the comparison to patient folder"
                 android:textColor="#CCCCCC"
                 android:textSize="13sp"
                 android:lineSpacingExtra="4dp" />
@@ -194,12 +194,12 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/select_left_button"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:text="Select Before"
+                    android:text="Before"
                     android:textColor="@color/white"
                     app:strokeColor="@color/white"
                     app:icon="@drawable/ic_add_photo"
@@ -207,12 +207,12 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/select_right_button"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:text="Select After"
+                    android:text="After"
                     android:textColor="@color/white"
                     app:strokeColor="@color/white"
                     app:icon="@drawable/ic_add_photo"
@@ -220,7 +220,7 @@
 
             </LinearLayout>
 
-            <!-- Tool Buttons -->
+            <!-- Tool Buttons Row 1 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -229,34 +229,65 @@
                 android:layout_marginTop="8dp">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/swap_button"
-                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:id="@+id/rotate_left_button"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Swap"
-                    app:icon="@drawable/ic_swap" />
+                    android:text="↻ Left"
+                    android:textColor="@color/white" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/reset_zoom_button"
-                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:id="@+id/swap_button"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="Reset Zoom"
-                    app:icon="@drawable/ic_zoom_reset" />
+                    android:text="⇄ Swap"
+                    android:textColor="@color/white" />
 
-                <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/sync_zoom_switch"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rotate_right_button"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:text="Sync Zoom"
-                    android:textColor="@color/white"
-                    android:checked="true" />
+                    android:text="↻ Right"
+                    android:textColor="@color/white" />
+
+            </LinearLayout>
+
+            <!-- Tool Buttons Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/landscape_button"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📱 Landscape"
+                    android:textColor="@color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/save_comparison_button"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💾 Save"
+                    android:textColor="@color/white" />
 
             </LinearLayout>
 
         </LinearLayout>
+
+        <!-- Comparison Container for screenshot -->
+        <View
+            android:id="@+id/comparison_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 

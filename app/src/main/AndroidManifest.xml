@@ -55,6 +55,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".DeveloperSettingsActivity"
+            android:parentActivityName=".HomeActivity" />
+
+        <activity
+            android:name=".RecycleBinActivity"
+            android:parentActivityName=".HomeActivity"
+            android:theme="@style/Theme.Meddocsapp.NoActionBar" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

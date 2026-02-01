@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-path name="external_files" path="." />
+    <!-- Allow sharing internal app files created under filesDir -->
+    <files-path name="internal_files" path="." />
+    <!-- Allow sharing cache files if needed -->
+    <cache-path name="cache_files" path="." />
+    <!-- Allow sharing app-specific external storage (getExternalFilesDir) -->
+    <external-files-path name="external_files" path="." />
 </paths>

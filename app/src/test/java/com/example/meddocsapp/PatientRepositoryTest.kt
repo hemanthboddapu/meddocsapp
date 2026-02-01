@@ -158,11 +158,24 @@ class PatientRepositoryTest {
 
         override fun getAllPatients(): Flow<List<Patient>> = patientsFlow
 
+        override fun getActivePatients(): Flow<List<Patient>> {
+            return patientsFlow.map { patients ->
+                patients.filter { it.status == "Active" }
+            }
+        }
+
+        override fun getDischargedPatients(): Flow<List<Patient>> {
+            return patientsFlow.map { patients ->
+                patients.filter { it.status == "Discharged" }
+            }
+        }
+
         override fun searchPatients(query: String): Flow<List<Patient>> {
             return patientsFlow.map { patients ->
                 patients.filter {
                     it.name.contains(query, ignoreCase = true) ||
-                    it.bedNumber.contains(query, ignoreCase = true)
+                    it.bedNumber.contains(query, ignoreCase = true) ||
+                    it.patientIdNumber.contains(query, ignoreCase = true)
                 }
             }
         }
@@ -173,6 +186,18 @@ class PatientRepositoryTest {
         }
 
         override fun getFileCount(): Flow<Int> = flowOf(0)
+
+        override fun getActivePatientCount(): Flow<Int> {
+            return patientsFlow.map { patients ->
+                patients.count { it.status == "Active" }
+            }
+        }
+
+        override fun getDischargedPatientCount(): Flow<Int> {
+            return patientsFlow.map { patients ->
+                patients.count { it.status == "Discharged" }
+            }
+        }
     }
 
     class FakePatientFileDao : PatientFileDao {
