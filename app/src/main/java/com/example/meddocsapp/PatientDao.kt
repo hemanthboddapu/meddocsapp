@@ -19,7 +19,7 @@ interface PatientDao {
     @Query("SELECT * FROM patients ORDER BY name ASC")
     fun getAllPatients(): Flow<List<Patient>>
 
-    @Query("SELECT * FROM patients WHERE name LIKE :query OR bedNumber LIKE :query")
+    @Query("SELECT * FROM patients WHERE name LIKE '%' || :query || '%' OR bedNumber LIKE '%' || :query || '%'")
     fun searchPatients(query: String): Flow<List<Patient>>
 
     @Delete

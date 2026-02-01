@@ -25,8 +25,16 @@ class PatientViewModel(private val repository: PatientRepository) : ViewModel() 
         return repository.getFilesForPatient(patientId).asLiveData()
     }
 
+    fun getImageFilesForPatient(patientId: Long): LiveData<List<PatientFile>> {
+        return repository.getImageFilesForPatient(patientId).asLiveData()
+    }
+
     fun insertFile(patientFile: PatientFile) = viewModelScope.launch {
         repository.insertFile(patientFile)
+    }
+
+    fun updateFile(patientFile: PatientFile) = viewModelScope.launch {
+        repository.updateFile(patientFile)
     }
 
     fun searchPatients(query: String): LiveData<List<Patient>> {

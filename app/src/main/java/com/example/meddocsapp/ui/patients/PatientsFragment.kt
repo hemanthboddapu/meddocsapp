@@ -2,17 +2,20 @@ package com.example.meddocsapp.ui.patients
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -26,7 +29,7 @@ import com.example.meddocsapp.PatientDetailActivity
 import com.example.meddocsapp.PatientViewModel
 import com.example.meddocsapp.PatientViewModelFactory
 import com.example.meddocsapp.R
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 
 class PatientsFragment : Fragment() {
 
@@ -35,22 +38,31 @@ class PatientsFragment : Fragment() {
     }
 
     private lateinit var patientRecyclerView: RecyclerView
-    private lateinit var addPatientFab: FloatingActionButton
+    private lateinit var addPatientFab: ExtendedFloatingActionButton
+    private lateinit var emptyStateLayout: LinearLayout
     private lateinit var patientAdapter: PatientAdapter
 
     private val addPatientLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getParcelableExtra<Patient>(AddEditPatientActivity.EXTRA_PATIENT)?.let {
-                patientViewModel.insert(it)
+            val patient = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(AddEditPatientActivity.EXTRA_PATIENT, Patient::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(AddEditPatientActivity.EXTRA_PATIENT)
             }
+            patient?.let { patientViewModel.insert(it) }
         }
     }
 
     private val editPatientLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getParcelableExtra<Patient>(AddEditPatientActivity.EXTRA_PATIENT)?.let {
-                patientViewModel.update(it)
+            val patient = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableExtra(AddEditPatientActivity.EXTRA_PATIENT, Patient::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                result.data?.getParcelableExtra(AddEditPatientActivity.EXTRA_PATIENT)
             }
+            patient?.let { patientViewModel.update(it) }
         }
     }
 
@@ -64,6 +76,7 @@ class PatientsFragment : Fragment() {
 
         patientRecyclerView = root.findViewById(R.id.patient_recycler_view)
         addPatientFab = root.findViewById(R.id.add_patient_fab)
+        emptyStateLayout = root.findViewById(R.id.empty_state_layout)
 
         patientAdapter = PatientAdapter(
             onPatientClicked = { patient ->
@@ -102,16 +115,40 @@ class PatientsFragment : Fragment() {
         patientRecyclerView.adapter = patientAdapter
         patientRecyclerView.layoutManager = LinearLayoutManager(requireContext())
 
+        // Collapse FAB on scroll
+        patientRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy > 0 && addPatientFab.isExtended) {
+                    addPatientFab.shrink()
+                } else if (dy < 0 && !addPatientFab.isExtended) {
+                    addPatientFab.extend()
+                }
+            }
+        })
+
         addPatientFab.setOnClickListener {
             val intent = Intent(requireActivity(), AddEditPatientActivity::class.java)
             addPatientLauncher.launch(intent)
         }
 
         patientViewModel.allPatients.observe(viewLifecycleOwner) { patients ->
-            patients?.let { patientAdapter.submitList(it) }
+            patients?.let {
+                patientAdapter.submitList(it)
+                updateEmptyState(it.isEmpty())
+            }
         }
 
         return root
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean) {
+        if (isEmpty) {
+            patientRecyclerView.visibility = View.GONE
+            emptyStateLayout.visibility = View.VISIBLE
+        } else {
+            patientRecyclerView.visibility = View.VISIBLE
+            emptyStateLayout.visibility = View.GONE
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -127,9 +164,14 @@ class PatientsFragment : Fragment() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 newText?.let {
-                    val searchQuery = "%${it}%"
-                    patientViewModel.searchPatients(searchQuery).observe(viewLifecycleOwner) { patients ->
-                        patients?.let { patientAdapter.submitList(it) }
+                    if (it.isEmpty()) {
+                        patientViewModel.allPatients.observe(viewLifecycleOwner) { patients ->
+                            patients?.let { patientAdapter.submitList(it) }
+                        }
+                    } else {
+                        patientViewModel.searchPatients(it).observe(viewLifecycleOwner) { patients ->
+                            patients?.let { patientAdapter.submitList(it) }
+                        }
                     }
                 }
                 return true
@@ -146,10 +188,24 @@ class PatientsFragment : Fragment() {
         class PatientViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val nameTextView: TextView = itemView.findViewById(R.id.patient_name_text_view)
             private val detailsTextView: TextView = itemView.findViewById(R.id.patient_details_text_view)
+            private val avatarText: TextView = itemView.findViewById(R.id.avatar_text)
+            private val statusBadge: TextView = itemView.findViewById(R.id.status_badge)
 
             fun bind(patient: Patient, onPatientClicked: (Patient) -> Unit, onPatientLongClicked: (Patient, View) -> Unit) {
                 nameTextView.text = patient.name
-                detailsTextView.text = "Bed: ${patient.bedNumber} - ${patient.status}"
+                detailsTextView.text = "Bed: ${patient.bedNumber}"
+
+                // Set avatar with first letter of name
+                avatarText.text = patient.name.firstOrNull()?.uppercase() ?: "?"
+
+                // Set status badge
+                statusBadge.text = patient.status
+                if (patient.status == "Active") {
+                    statusBadge.setBackgroundResource(R.drawable.status_badge_active)
+                } else {
+                    statusBadge.setBackgroundResource(R.drawable.status_badge_discharged)
+                }
+
                 itemView.setOnClickListener { onPatientClicked(patient) }
                 itemView.setOnLongClickListener {
                     onPatientLongClicked(patient, itemView)

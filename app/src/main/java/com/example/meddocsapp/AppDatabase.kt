@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Patient::class, PatientFile::class], version = 4, exportSchema = false)
+@Database(entities = [Patient::class, PatientFile::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun patientDao(): PatientDao
@@ -24,7 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "meddocs_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 INSTANCE = instance
                 instance
@@ -50,6 +50,12 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE patient_files ADD COLUMN fileName TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE patient_files ADD COLUMN size INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE patient_files ADD COLUMN createdAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE patients ADD COLUMN patientIdNumber TEXT NOT NULL DEFAULT ''")
             }
         }
     }

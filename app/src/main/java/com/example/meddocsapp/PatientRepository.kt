@@ -2,36 +2,44 @@ package com.example.meddocsapp
 
 import kotlinx.coroutines.flow.Flow
 
-class PatientRepository(private val patientDao: PatientDao, private val patientFileDao: PatientFileDao) {
+open class PatientRepository(private val patientDao: PatientDao, private val patientFileDao: PatientFileDao) {
 
-    val allPatients: Flow<List<Patient>> = patientDao.getAllPatients()
-    val fileCount: Flow<Int> = patientDao.getFileCount()
+    open val allPatients: Flow<List<Patient>> = patientDao.getAllPatients()
+    open val fileCount: Flow<Int> = patientDao.getFileCount()
 
-    suspend fun insert(patient: Patient) {
+    open suspend fun insert(patient: Patient) {
         patientDao.insert(patient)
     }
 
-    suspend fun update(patient: Patient) {
+    open suspend fun update(patient: Patient) {
         patientDao.update(patient)
     }
 
-    fun getFilesForPatient(patientId: Long): Flow<List<PatientFile>> {
+    open fun getFilesForPatient(patientId: Long): Flow<List<PatientFile>> {
         return patientFileDao.getFilesForPatient(patientId)
     }
 
-    suspend fun insertFile(patientFile: PatientFile) {
+    open fun getImageFilesForPatient(patientId: Long): Flow<List<PatientFile>> {
+        return patientFileDao.getImageFilesForPatient(patientId)
+    }
+
+    open suspend fun insertFile(patientFile: PatientFile) {
         patientFileDao.insert(patientFile)
     }
 
-    fun searchPatients(query: String): Flow<List<Patient>> {
+    open suspend fun updateFile(patientFile: PatientFile) {
+        patientFileDao.update(patientFile)
+    }
+
+    open fun searchPatients(query: String): Flow<List<Patient>> {
         return patientDao.searchPatients(query)
     }
 
-    suspend fun delete(patientFile: PatientFile) {
+    open suspend fun delete(patientFile: PatientFile) {
         patientFileDao.delete(patientFile)
     }
 
-    suspend fun delete(patient: Patient) {
+    open suspend fun delete(patient: Patient) {
         patientDao.delete(patient)
     }
 }

@@ -10,6 +10,7 @@ import kotlinx.parcelize.Parcelize
 data class Patient(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val patientIdNumber: String = "",  // Hospital/clinic patient ID
     val name: String,
     val bedNumber: String,
     val status: String,

@@ -6,6 +6,11 @@
         android:title="Take Picture"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_compare"
+        android:icon="@drawable/ic_compare"
+        android:title="Compare Images"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_export"
         android:icon="@drawable/ic_export"
         android:title="Export"

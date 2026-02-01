@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 
 class AddEditPatientActivity : AppCompatActivity() {
 
+    private lateinit var patientIdNumberEditText: EditText
     private lateinit var patientNameEditText: EditText
     private lateinit var bedNumberEditText: EditText
     private lateinit var patientStatusSpinner: Spinner
@@ -25,6 +26,7 @@ class AddEditPatientActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_edit_patient)
 
+        patientIdNumberEditText = findViewById(R.id.patient_id_number_edit_text)
         patientNameEditText = findViewById(R.id.patient_name_edit_text)
         bedNumberEditText = findViewById(R.id.bed_number_edit_text)
         patientStatusSpinner = findViewById(R.id.patient_status_spinner)
@@ -45,6 +47,7 @@ class AddEditPatientActivity : AppCompatActivity() {
 
         if (existingPatient != null) {
             title = "Edit Patient"
+            patientIdNumberEditText.setText(existingPatient?.patientIdNumber)
             patientNameEditText.setText(existingPatient?.name)
             bedNumberEditText.setText(existingPatient?.bedNumber)
             val statusPosition = statusOptions.indexOf(existingPatient?.status)
@@ -64,6 +67,7 @@ class AddEditPatientActivity : AppCompatActivity() {
     }
 
     private fun savePatient() {
+        val patientIdNumber = patientIdNumberEditText.text.toString()
         val name = patientNameEditText.text.toString()
         val bedNumber = bedNumberEditText.text.toString()
         val status = patientStatusSpinner.selectedItem.toString()
@@ -72,13 +76,19 @@ class AddEditPatientActivity : AppCompatActivity() {
         val problem = problemEditText.text.toString()
 
         if (name.isBlank() || bedNumber.isBlank()) {
-            // Show an error message if the name or bed number is empty
+            if (name.isBlank()) {
+                patientNameEditText.error = "Name is required"
+            }
+            if (bedNumber.isBlank()) {
+                bedNumberEditText.error = "Bed number is required"
+            }
             return
         }
 
         val resultIntent = Intent()
         if (existingPatient != null) {
             val updatedPatient = existingPatient!!.copy(
+                patientIdNumber = patientIdNumber,
                 name = name,
                 bedNumber = bedNumber,
                 status = status,
@@ -89,6 +99,7 @@ class AddEditPatientActivity : AppCompatActivity() {
             resultIntent.putExtra(EXTRA_PATIENT, updatedPatient)
         } else {
             val newPatient = Patient(
+                patientIdNumber = patientIdNumber,
                 name = name,
                 bedNumber = bedNumber,
                 status = status,

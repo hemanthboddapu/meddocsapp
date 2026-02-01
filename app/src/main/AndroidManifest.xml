@@ -35,6 +35,10 @@
         <activity
             android:name=".ImageViewActivity"
             android:parentActivityName=".PatientDetailActivity" />
+        <activity
+            android:name=".ImageCompareActivity"
+            android:parentActivityName=".PatientDetailActivity"
+            android:theme="@style/Theme.Meddocsapp.NoActionBar" />
 
         <activity
             android:name=".ShareActivity"
