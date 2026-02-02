@@ -7,6 +7,11 @@
         android:title="Recycle Bin"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_privacy_policy"
+        android:icon="@drawable/ic_privacy"
+        android:title="Privacy Policy"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_developer_settings"
         android:icon="@drawable/ic_settings"
         android:title="Developer Settings"

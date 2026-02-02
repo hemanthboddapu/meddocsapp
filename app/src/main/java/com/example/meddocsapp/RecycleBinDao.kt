@@ -44,5 +44,8 @@ interface RecycleBinDao {
     /** Get recycle bin item by original ID and type */
     @Query("SELECT * FROM recycle_bin WHERE originalId = :originalId AND itemType = :itemType LIMIT 1")
     suspend fun getItemByOriginalId(originalId: Long, itemType: String): RecycleBinItem?
-}
 
+    /** Get all recycle bin items once (non-Flow) */
+    @Query("SELECT * FROM recycle_bin ORDER BY deletedAt DESC")
+    suspend fun getAllOnce(): List<RecycleBinItem>
+}

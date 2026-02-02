@@ -19,6 +19,7 @@ import com.example.meddocsapp.Patient
 import com.example.meddocsapp.PatientDetailActivity
 import com.example.meddocsapp.PatientViewModel
 import com.example.meddocsapp.PatientViewModelFactory
+import com.example.meddocsapp.PrivacyPolicyActivity
 import com.example.meddocsapp.R
 import com.example.meddocsapp.RecycleBinActivity
 import java.text.SimpleDateFormat
@@ -132,6 +133,10 @@ class DashboardFragment : Fragment() {
         return when (item.itemId) {
             R.id.action_recycle_bin -> {
                 startActivity(Intent(requireContext(), RecycleBinActivity::class.java))
+                true
+            }
+            R.id.action_privacy_policy -> {
+                startActivity(Intent(requireContext(), PrivacyPolicyActivity::class.java))
                 true
             }
             R.id.action_developer_settings -> {

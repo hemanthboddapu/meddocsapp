@@ -223,9 +223,11 @@
 
         <!-- Recent Patients Section -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/recent_patients_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@color/cardBackground"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp">
 

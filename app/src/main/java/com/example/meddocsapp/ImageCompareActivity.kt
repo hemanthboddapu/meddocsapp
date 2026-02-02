@@ -3,32 +3,33 @@ package com.example.meddocsapp
 import android.content.ContentValues
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.github.chrisbanes.photoview.PhotoView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -55,15 +56,21 @@ class ImageCompareActivity : AppCompatActivity() {
     private lateinit var rightImageLabel: TextView
     private lateinit var leftImageCard: MaterialCardView
     private lateinit var rightImageCard: MaterialCardView
-    private lateinit var selectLeftButton: MaterialButton
-    private lateinit var selectRightButton: MaterialButton
-    private lateinit var swapButton: MaterialButton
-    private lateinit var rotateLeftButton: MaterialButton
-    private lateinit var rotateRightButton: MaterialButton
-    private lateinit var landscapeButton: MaterialButton
-    private lateinit var saveComparisonButton: MaterialButton
     private lateinit var instructionsLayout: View
     private lateinit var comparisonContainer: View
+    private lateinit var expandedTools: View
+    private lateinit var toggleToolsFab: View
+
+    // FAB buttons
+    private lateinit var selectLeftButton: View
+    private lateinit var selectRightButton: View
+    private lateinit var swapButton: View
+    private lateinit var rotateLeftButton: View
+    private lateinit var rotateRightButton: View
+    private lateinit var landscapeButton: View
+    private lateinit var saveComparisonButton: View
+    private lateinit var quickSaveButton: View
+    private var dismissInstructionsButton: View? = null
 
     private var patient: Patient? = null
     private var leftImage: PatientFile? = null
@@ -73,6 +80,7 @@ class ImageCompareActivity : AppCompatActivity() {
     private var leftRotation = 0f
     private var rightRotation = 0f
     private var isLandscape = false
+    private var toolsExpanded = false
 
     private val patientViewModel: PatientViewModel by viewModels {
         PatientViewModelFactory((application as MedDocsApplication).repository)
@@ -98,19 +106,23 @@ class ImageCompareActivity : AppCompatActivity() {
         rightImageLabel = findViewById(R.id.right_image_label)
         leftImageCard = findViewById(R.id.left_image_card)
         rightImageCard = findViewById(R.id.right_image_card)
+        instructionsLayout = findViewById(R.id.instructions_layout)
+        comparisonContainer = findViewById(R.id.comparison_container)
+
+        // FAB controls
+        expandedTools = findViewById(R.id.expanded_tools)
+        toggleToolsFab = findViewById(R.id.toggle_tools_fab)
         selectLeftButton = findViewById(R.id.select_left_button)
         selectRightButton = findViewById(R.id.select_right_button)
         swapButton = findViewById(R.id.swap_button)
-        instructionsLayout = findViewById(R.id.instructions_layout)
+        rotateLeftButton = findViewById(R.id.rotate_left_button)
+        rotateRightButton = findViewById(R.id.rotate_right_button)
+        landscapeButton = findViewById(R.id.landscape_button)
+        saveComparisonButton = findViewById(R.id.save_comparison_button)
+        dismissInstructionsButton = findViewById(R.id.dismiss_instructions_button)
 
-        // Get the parent layout containing both image cards for screenshot
-        comparisonContainer = leftImageCard.parent as View
-
-        // New buttons - may not exist in old layout, handle gracefully
-        rotateLeftButton = findViewById(R.id.rotate_left_button) ?: MaterialButton(this)
-        rotateRightButton = findViewById(R.id.rotate_right_button) ?: MaterialButton(this)
-        landscapeButton = findViewById(R.id.landscape_button) ?: MaterialButton(this)
-        saveComparisonButton = findViewById(R.id.save_comparison_button) ?: MaterialButton(this)
+        // Quick save button
+        quickSaveButton = findViewById(R.id.quick_save_button)
     }
 
     private fun setupToolbar() {
@@ -169,6 +181,28 @@ class ImageCompareActivity : AppCompatActivity() {
         rotateRightButton.setOnClickListener { rotateRightImage() }
         landscapeButton.setOnClickListener { toggleLandscape() }
         saveComparisonButton.setOnClickListener { saveComparison() }
+        quickSaveButton.setOnClickListener { saveComparison() }
+
+        // Toggle FAB for expanding/collapsing tools
+        toggleToolsFab.setOnClickListener { toggleTools() }
+
+        // Dismiss instructions button
+        dismissInstructionsButton?.setOnClickListener {
+            instructionsLayout.visibility = View.GONE
+        }
+    }
+
+    private fun updateQuickSaveButtonVisibility() {
+        quickSaveButton.visibility = if (leftImage != null && rightImage != null) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun toggleTools() {
+        toolsExpanded = !toolsExpanded
+        expandedTools.visibility = if (toolsExpanded) View.VISIBLE else View.GONE
     }
 
     private fun rotateLeftImage() {
@@ -188,7 +222,9 @@ class ImageCompareActivity : AppCompatActivity() {
         } else {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
-        landscapeButton.text = if (isLandscape) "Portrait" else "Landscape"
+        // Close the expanded tools when switching orientation
+        toolsExpanded = false
+        expandedTools.visibility = View.GONE
     }
 
     private fun saveComparison() {
@@ -198,13 +234,29 @@ class ImageCompareActivity : AppCompatActivity() {
         }
 
         try {
-            // Create a bitmap from the comparison container
-            val bitmap = Bitmap.createBitmap(
-                comparisonContainer.width,
-                comparisonContainer.height,
-                Bitmap.Config.ARGB_8888
-            )
+            // Use a scale factor for higher resolution output
+            val scaleFactor = 2.0f
+
+            // Get the comparison container dimensions
+            val containerWidth = comparisonContainer.width
+            val containerHeight = comparisonContainer.height
+
+            if (containerWidth <= 0 || containerHeight <= 0) {
+                Toast.makeText(this, "Please wait for images to load", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // Create a high-resolution bitmap
+            val outputWidth = (containerWidth * scaleFactor).toInt()
+            val outputHeight = (containerHeight * scaleFactor).toInt()
+
+            val bitmap = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+
+            // Scale the canvas to render at higher resolution
+            canvas.scale(scaleFactor, scaleFactor)
+
+            // Draw the comparison container (captures zoom/pan state)
             comparisonContainer.draw(canvas)
 
             // Save to patient's folder
@@ -213,8 +265,9 @@ class ImageCompareActivity : AppCompatActivity() {
 
             val file = File(filesDir, fileName)
             FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
             }
+            bitmap.recycle()
 
             // Add to patient's files
             val patientFile = PatientFile(
@@ -227,13 +280,14 @@ class ImageCompareActivity : AppCompatActivity() {
             )
             patientViewModel.insertFile(patientFile)
 
-            Toast.makeText(this, "Comparison saved to patient folder", Toast.LENGTH_SHORT).show()
-            AppLogger.d(TAG, "Comparison saved: $fileName")
+            Toast.makeText(this, "Comparison saved", Toast.LENGTH_SHORT).show()
+            AppLogger.d(TAG, "Comparison saved: $fileName, size: ${file.length() / 1024}KB")
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error saving comparison", e)
-            Toast.makeText(this, "Error saving comparison", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error saving comparison: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
+
 
     private fun showImagePicker(isLeft: Boolean) {
         if (imageFiles.isEmpty()) {
@@ -265,6 +319,7 @@ class ImageCompareActivity : AppCompatActivity() {
                         rightImageLabel.text = selectedFile.fileName
                     }
                     updateInstructionsVisibility()
+                    updateQuickSaveButtonVisibility()
                     AppLogger.d(TAG, "Selected image: ${selectedFile.fileName}")
                 } catch (e: Exception) {
                     AppLogger.e(TAG, "Error loading selected image", e)
@@ -367,18 +422,80 @@ class ImageCompareActivity : AppCompatActivity() {
                 toggleFullscreen()
                 true
             }
+            R.id.action_canvas_size -> {
+                showCanvasSizeDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
+    private fun showCanvasSizeDialog() {
+        val options = arrayOf(
+            "1:1 Square",
+            "4:3 Standard",
+            "16:9 Widescreen",
+            "3:4 Portrait",
+            "9:16 Mobile Portrait"
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle("Canvas Size")
+            .setItems(options) { _, which ->
+                applyCanvasSize(which)
+            }
+            .show()
+    }
+
+    private fun applyCanvasSize(sizeOption: Int) {
+        val comparisonLayout = comparisonContainer as? android.widget.LinearLayout ?: return
+
+        // Get screen dimensions
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels - 200 // Account for toolbar and bottom nav
+
+        val (targetWidth, targetHeight) = when (sizeOption) {
+            0 -> { // 1:1 Square
+                val size = minOf(screenWidth, screenHeight)
+                size to size
+            }
+            1 -> { // 4:3 Standard
+                val height = (screenWidth * 3) / 4
+                screenWidth to minOf(height, screenHeight)
+            }
+            2 -> { // 16:9 Widescreen
+                val height = (screenWidth * 9) / 16
+                screenWidth to minOf(height, screenHeight)
+            }
+            3 -> { // 3:4 Portrait
+                val width = (screenHeight * 3) / 4
+                minOf(width, screenWidth) to screenHeight
+            }
+            4 -> { // 9:16 Mobile Portrait
+                val width = (screenHeight * 9) / 16
+                minOf(width, screenWidth) to screenHeight
+            }
+            else -> screenWidth to screenHeight
+        }
+
+        comparisonLayout.layoutParams = comparisonLayout.layoutParams.apply {
+            width = targetWidth
+            height = targetHeight
+        }
+        comparisonLayout.requestLayout()
+
+        Toast.makeText(this, "Canvas size applied", Toast.LENGTH_SHORT).show()
+    }
+
     private fun toggleFullscreen() {
-        val controlsLayout = findViewById<View>(R.id.controls_layout)
-        if (controlsLayout.visibility == View.VISIBLE) {
-            controlsLayout.visibility = View.GONE
-            supportActionBar?.hide()
+        val fabContainer = findViewById<View>(R.id.fab_container)
+        if (fabContainer.visibility == View.VISIBLE) {
+            fabContainer.visibility = View.GONE
+            findViewById<View>(R.id.app_bar_layout)?.visibility = View.GONE
         } else {
-            controlsLayout.visibility = View.VISIBLE
-            supportActionBar?.show()
+            fabContainer.visibility = View.VISIBLE
+            findViewById<View>(R.id.app_bar_layout)?.visibility = View.VISIBLE
         }
     }
 

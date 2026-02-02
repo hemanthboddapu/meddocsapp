@@ -32,20 +32,32 @@ class DeveloperSettingsActivity : AppCompatActivity() {
     private lateinit var exportLogsButton: Button
     private lateinit var clearLogsButton: Button
     private lateinit var logStatusText: TextView
+    private lateinit var storageOverviewText: TextView
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
+    private val repository: PatientRepository by lazy {
+        (application as MedDocsApplication).repository
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_developer_settings)
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "Developer Settings"
-
+        setupToolbar()
         initViews()
         setupDeveloperModeSwitch()
         setupButtons()
         updateLogStatus()
+        updateStorageOverview()
+    }
+
+    private fun setupToolbar() {
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = "Developer Settings"
+        toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
     private fun initViews() {
@@ -54,6 +66,7 @@ class DeveloperSettingsActivity : AppCompatActivity() {
         exportLogsButton = findViewById(R.id.export_logs_button)
         clearLogsButton = findViewById(R.id.clear_logs_button)
         logStatusText = findViewById(R.id.log_status_text)
+        storageOverviewText = findViewById(R.id.storage_overview_text)
     }
 
     private fun setupDeveloperModeSwitch() {
@@ -81,6 +94,53 @@ class DeveloperSettingsActivity : AppCompatActivity() {
             val formattedSize = android.text.format.Formatter.formatShortFileSize(this, totalSize)
             logStatusText.text = "${logFiles.size} log file(s), $formattedSize total"
         }
+    }
+
+    private fun updateStorageOverview() {
+        // Compute on background thread to avoid blocking UI if there are many files
+        Thread {
+            try {
+                val filesDir = filesDir
+                val allFiles = filesDir.walkTopDown().filter { it.isFile }.toList()
+
+                val totalBytes = allFiles.sumOf { it.length() }
+                val imageBytes = allFiles.filter { it.extension.lowercase() in listOf("jpg", "jpeg", "png", "gif", "webp") }
+                    .sumOf { it.length() }
+                val videoBytes = allFiles.filter { it.extension.lowercase() in listOf("mp4", "mkv", "avi", "mov") }
+                    .sumOf { it.length() }
+                val audioBytes = allFiles.filter { it.extension.lowercase() in listOf("m4a", "aac", "mp3", "wav") }
+                    .sumOf { it.length() }
+                val docBytes = allFiles.filter { it.extension.lowercase() in listOf("pdf", "doc", "docx", "ppt", "pptx") }
+                    .sumOf { it.length() }
+
+                val formatter = android.text.format.Formatter::formatShortFileSize
+
+                val totalStr = formatter(this, totalBytes)
+                val imagesStr = formatter(this, imageBytes)
+                val videoStr = formatter(this, videoBytes)
+                val audioStr = formatter(this, audioBytes)
+                val docStr = formatter(this, docBytes)
+
+                val overview = buildString {
+                    appendLine("App Storage Overview (internal filesDir)")
+                    appendLine("Total files: ${allFiles.size}, Total size: $totalStr")
+                    appendLine()
+                    appendLine("Images: $imagesStr")
+                    appendLine("Videos: $videoStr")
+                    appendLine("Audio: $audioStr")
+                    appendLine("Docs: $docStr")
+                }
+
+                runOnUiThread {
+                    storageOverviewText.text = overview
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to compute storage overview", e)
+                runOnUiThread {
+                    storageOverviewText.text = "Unable to compute storage overview"
+                }
+            }
+        }.start()
     }
 
     private fun showLogViewer() {
@@ -249,4 +309,3 @@ class DeveloperSettingsActivity : AppCompatActivity() {
         }
     }
 }
-

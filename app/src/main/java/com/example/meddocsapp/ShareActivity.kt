@@ -142,7 +142,8 @@ class ShareActivity : AppCompatActivity() {
             allPatients.filter { patient ->
                 patient.name.contains(query, ignoreCase = true) ||
                 patient.bedNumber.contains(query, ignoreCase = true) ||
-                patient.patientIdNumber.contains(query, ignoreCase = true)
+                patient.patientIdNumber.contains(query, ignoreCase = true) ||
+                (patient.tags?.contains(query, ignoreCase = true) == true)
             }
         }
         updatePatientListView()

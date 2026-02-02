@@ -16,6 +16,7 @@ class MedDocsApplication : Application() {
         PatientRepository(
             database.patientDao(),
             database.patientFileDao(),
+            this,
             database.recycleBinDao()
         )
     }

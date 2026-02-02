@@ -14,10 +14,11 @@ import kotlinx.parcelize.Parcelize
  * @property bedNumber Bed/room number (required)
  * @property status Current status: "Active" or "Discharged"
  * @property gender Patient's gender (optional)
- * @property dob Date of birth as string (optional)
+ * @property dob Date of birth or age as string (optional)
  * @property problem Medical problem/diagnosis description (optional)
  * @property admissionDate Admission date in milliseconds (optional)
  * @property dischargeDate Discharge date in milliseconds (optional)
+ * @property tags Comma-separated tags/hashtags for filtering (optional)
  * @property createdAt Record creation timestamp in milliseconds
  */
 @Parcelize
@@ -34,5 +35,6 @@ data class Patient(
     val problem: String? = null,
     val admissionDate: Long? = null,
     val dischargeDate: Long? = null,
+    val tags: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 ) : Parcelable

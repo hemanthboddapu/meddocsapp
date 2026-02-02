@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary colors - slightly adjusted for dark mode -->
+    <color name="colorPrimary">#2196F3</color>
+    <color name="colorPrimaryDark">#1565C0</color>
+    <color name="colorPrimaryLight">#1E3A5F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- Status colors - brighter for visibility on dark backgrounds -->
+    <color name="statusActive">#66BB6A</color>
+    <color name="statusDischarged">#FFA726</color>
+
+    <!-- Card colors - dark variants -->
+    <color name="cardBackground">#1E1E1E</color>
+    <color name="cardTotalPatients">#1A2C3D</color>
+    <color name="cardActivePatients">#1A2E1A</color>
+    <color name="cardDischargedPatients">#2E2518</color>
+    <color name="cardTotalFiles">#2A1F2E</color>
+
+    <!-- Text colors - light for dark backgrounds -->
+    <color name="textPrimary">#ECECEC</color>
+    <color name="textSecondary">#B0B0B0</color>
+    <color name="textHint">#757575</color>
+
+    <!-- Divider -->
+    <color name="divider">#3D3D3D</color>
+
+    <!-- Background -->
+    <color name="backgroundColor">#121212</color>
+
+    <!-- Avatar colors based on gender -->
+    <color name="avatar_male">#64B5F6</color>
+    <color name="avatar_female">#F06292</color>
+    <color name="avatar_default">#90A4AE</color>
+</resources>
+

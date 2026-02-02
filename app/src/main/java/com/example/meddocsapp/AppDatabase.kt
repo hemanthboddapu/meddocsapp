@@ -23,8 +23,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * - v5: Added patientIdNumber to patients
  * - v6: Added admissionDate, dischargeDate, createdAt to patients
  * - v7: Added recycle_bin table
+ * - v8: Added tags column to patients for hashtag filtering
  */
-@Database(entities = [Patient::class, PatientFile::class, RecycleBinItem::class], version = 7, exportSchema = false)
+@Database(entities = [Patient::class, PatientFile::class, RecycleBinItem::class], version = 8, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun patientDao(): PatientDao
@@ -48,7 +49,8 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_3_4,
                     MIGRATION_4_5,
                     MIGRATION_5_6,
-                    MIGRATION_6_7
+                    MIGRATION_6_7,
+                    MIGRATION_7_8
                 )
                 .build()
                 INSTANCE = instance
@@ -106,6 +108,12 @@ abstract class AppDatabase : RoomDatabase() {
                         `expiresAt` INTEGER NOT NULL
                     )
                 """.trimIndent())
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE patients ADD COLUMN tags TEXT")
             }
         }
     }

@@ -54,9 +54,10 @@ A comprehensive Android application for managing patient records and associated 
 - **Side-by-Side View**: Compare two images simultaneously
 - **Independent Rotation**: Rotate left and right images independently (90° increments)
 - **Landscape Mode**: Toggle between portrait and landscape orientation
-- **Save Comparison**: Save the comparison view as a new image to patient folder
+- **Save Comparison**: Save the current zoomed/panned comparison view as a new image to patient folder (high resolution)
 - **Fullscreen Mode**: Hide controls for maximum viewing area
 - **Image Picker**: Grid-based image selection from patient's files
+- **Quick Save FAB**: Compact save button at top-right, avoiding overlap with tools
 
 ### File Sharing
 - **Share Intent Receiver**: Accept shared files from external apps
@@ -78,7 +79,16 @@ A comprehensive Android application for managing patient records and associated 
 - **Log Viewer**: View logs directly in the app
 - **Log Export**: Export logs for specific time ranges
 - **Clear Logs**: Delete all log files
+- **Storage Overview**: View internal storage usage breakdown (total, images, videos, audio, docs)
 - **Toggle Control**: Enable/disable developer mode from settings
+
+### Privacy & Security
+- **Local-Only Storage**: All data stored on device, never transmitted
+- **No Analytics**: No tracking, advertising, or third-party data sharing
+- **No Accounts**: No registration or login required
+- **In-App Privacy Policy**: Full privacy policy accessible via menu
+- **GDPR/HIPAA Aligned**: Designed with privacy-by-design principles
+- **User Control**: Full ownership and control of all data
 
 ## How It Works
 

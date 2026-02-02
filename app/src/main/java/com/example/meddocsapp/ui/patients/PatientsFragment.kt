@@ -58,6 +58,7 @@ class PatientsFragment : Fragment() {
     private lateinit var patientAdapter: PatientAdapter
 
     private var currentFilterStatus: String? = null // null = all, "Active", "Discharged"
+    private var currentTagFilter: String? = null // null = all, or specific tag
 
     private val addPatientLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -147,11 +148,28 @@ class PatientsFragment : Fragment() {
     }
 
     private fun applyFilter(patients: List<Patient>): List<Patient> {
-        return when (currentFilterStatus) {
-            "Active" -> patients.filter { it.status == "Active" }
-            "Discharged" -> patients.filter { it.status == "Discharged" }
-            else -> patients
+        var filteredList = patients
+
+        // Filter by status
+        filteredList = when (currentFilterStatus) {
+            "Active" -> filteredList.filter { it.status == "Active" }
+            "Discharged" -> filteredList.filter { it.status == "Discharged" }
+            else -> filteredList
         }
+
+        // Filter by tag
+        currentTagFilter?.let { tag ->
+            if (tag.isNotEmpty()) {
+                filteredList = filteredList.filter { patient ->
+                    patient.tags?.split(",")?.map { it.trim().lowercase() }
+                        ?.contains(tag.lowercase()) == true
+                }
+            }
+        }
+
+        // Sort: Active patients first, then by creation date (newest first)
+        return filteredList.sortedWith(compareBy<Patient> { it.status != "Active" }
+            .thenByDescending { it.createdAt })
     }
 
     private fun showPatientContextMenu(patient: Patient, view: View) {
@@ -255,7 +273,7 @@ class PatientsFragment : Fragment() {
     }
 
     private fun showFilterDialog() {
-        val options = arrayOf("All Patients", "Active Only", "Discharged Only")
+        val options = arrayOf("All Patients", "Active Only", "Discharged Only", "Filter by Tag...")
         val currentSelection = when (currentFilterStatus) {
             "Active" -> 1
             "Discharged" -> 2
@@ -265,10 +283,24 @@ class PatientsFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("Filter Patients")
             .setSingleChoiceItems(options, currentSelection) { dialog, which ->
-                currentFilterStatus = when (which) {
-                    1 -> "Active"
-                    2 -> "Discharged"
-                    else -> null
+                when (which) {
+                    1 -> {
+                        currentFilterStatus = "Active"
+                        currentTagFilter = null
+                    }
+                    2 -> {
+                        currentFilterStatus = "Discharged"
+                        currentTagFilter = null
+                    }
+                    3 -> {
+                        dialog.dismiss()
+                        showTagFilterDialog()
+                        return@setSingleChoiceItems
+                    }
+                    else -> {
+                        currentFilterStatus = null
+                        currentTagFilter = null
+                    }
                 }
                 // Re-apply filter
                 patientViewModel.allPatients.value?.let { patients ->
@@ -277,6 +309,50 @@ class PatientsFragment : Fragment() {
                     updateEmptyState(filteredList.isEmpty())
                 }
                 dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showTagFilterDialog() {
+        // Collect all unique tags from patients
+        val allTags = mutableSetOf<String>()
+        patientViewModel.allPatients.value?.forEach { patient ->
+            patient.tags?.split(",")?.forEach { tag ->
+                val trimmed = tag.trim()
+                if (trimmed.isNotEmpty()) {
+                    allTags.add(trimmed)
+                }
+            }
+        }
+
+        if (allTags.isEmpty()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("No Tags Found")
+                .setMessage("No patients have tags assigned. Add tags when editing a patient.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val tagArray = allTags.sorted().toTypedArray()
+        val options = arrayOf("Clear Tag Filter") + tagArray
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Filter by Tag")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    currentTagFilter = null
+                } else {
+                    currentTagFilter = tagArray[which - 1]
+                    currentFilterStatus = null // Clear status filter when filtering by tag
+                }
+                // Re-apply filter
+                patientViewModel.allPatients.value?.let { patients ->
+                    val filteredList = applyFilter(patients)
+                    patientAdapter.submitList(filteredList)
+                    updateEmptyState(filteredList.isEmpty())
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -354,7 +430,6 @@ class PatientsFragment : Fragment() {
             private val detailsTextView: TextView = itemView.findViewById(R.id.patient_details_text_view)
             private val avatarImage: ImageView = itemView.findViewById(R.id.avatar_image)
             private val statusBadge: TextView = itemView.findViewById(R.id.status_badge)
-            private val quickDischargeButton: ImageView? = itemView.findViewById(R.id.quick_discharge_button)
 
             fun bind(
                 patient: Patient,
@@ -362,13 +437,19 @@ class PatientsFragment : Fragment() {
                 onPatientLongClicked: (Patient, View) -> Unit,
                 onQuickDischargeClicked: (Patient) -> Unit
             ) {
-                nameTextView.text = patient.name
+                // Display name in title case
+                nameTextView.text = toTitleCase(patient.name)
 
-                // Build details string with admission date if available
+                // Build details string with admission date and tags if available
                 val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                 var details = "Bed: ${patient.bedNumber}"
                 patient.admissionDate?.let {
                     details += " • Admitted: ${dateFormat.format(Date(it))}"
+                }
+                patient.tags?.let { tags ->
+                    if (tags.isNotEmpty()) {
+                        details += "\n🏷️ $tags"
+                    }
                 }
                 detailsTextView.text = details
 
@@ -379,10 +460,8 @@ class PatientsFragment : Fragment() {
                 statusBadge.text = patient.status
                 if (patient.status == "Active") {
                     statusBadge.setBackgroundResource(R.drawable.status_badge_active)
-                    quickDischargeButton?.visibility = View.VISIBLE
                 } else {
                     statusBadge.setBackgroundResource(R.drawable.status_badge_discharged)
-                    quickDischargeButton?.visibility = View.GONE
                 }
 
                 itemView.setOnClickListener { onPatientClicked(patient) }
@@ -390,7 +469,14 @@ class PatientsFragment : Fragment() {
                     onPatientLongClicked(patient, itemView)
                     true
                 }
-                quickDischargeButton?.setOnClickListener { onQuickDischargeClicked(patient) }
+            }
+
+            private fun toTitleCase(input: String): String {
+                return input.split(" ").joinToString(" ") { word ->
+                    word.lowercase().replaceFirstChar {
+                        if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                    }
+                }
             }
         }
 

@@ -3,6 +3,9 @@ package com.example.meddocsapp
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONObject
 import com.google.gson.Gson
+import android.content.Context
+import android.net.Uri
+import java.io.File
 
 /**
  * Repository for patient data operations.
@@ -16,6 +19,7 @@ import com.google.gson.Gson
 open class PatientRepository(
     private val patientDao: PatientDao,
     private val patientFileDao: PatientFileDao,
+    private val appContext: Context,
     private val recycleBinDao: RecycleBinDao? = null
 ) {
     companion object {
@@ -103,15 +107,6 @@ open class PatientRepository(
     open fun searchPatients(query: String): Flow<List<Patient>> {
         AppLogger.d(TAG, "Searching patients with query: $query")
         return patientDao.searchPatients(query)
-    }
-
-    /**
-     * Delete a patient file
-     * @param patientFile File to delete
-     */
-    open suspend fun delete(patientFile: PatientFile) {
-        AppLogger.d(TAG, "Deleting file: ${patientFile.id} - ${patientFile.fileName}")
-        patientFileDao.delete(patientFile)
     }
 
     /**
@@ -226,10 +221,40 @@ open class PatientRepository(
     }
 
     /**
+     * Delete a physical file on disk if it exists.
+     */
+    private fun deletePhysicalFile(fileUriString: String?) {
+        if (fileUriString.isNullOrBlank()) return
+        try {
+            val uri = Uri.parse(fileUriString)
+            val path = uri.path
+            if (!path.isNullOrBlank()) {
+                val file = File(path)
+                if (file.exists()) {
+                    val deleted = file.delete()
+                    AppLogger.d(TAG, "Deleted physical file $path: $deleted")
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to delete physical file: $fileUriString", e)
+        }
+    }
+
+    /**
      * Permanently delete an item from recycle bin
      * @param recycleBinItem Item to permanently delete
      */
     open suspend fun permanentlyDelete(recycleBinItem: RecycleBinItem) {
+        // If this is a file, also remove the underlying physical file from internal storage
+        if (recycleBinItem.itemType == "file") {
+            try {
+                val patientFile = Gson().fromJson(recycleBinItem.itemData, PatientFile::class.java)
+                deletePhysicalFile(patientFile.uri)
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to parse PatientFile from recycle bin for physical delete", e)
+            }
+        }
+
         recycleBinDao?.delete(recycleBinItem)
         AppLogger.d(TAG, "Permanently deleted from recycle bin: ${recycleBinItem.id}")
     }
@@ -238,8 +263,31 @@ open class PatientRepository(
      * Clear all items from recycle bin
      */
     open suspend fun clearRecycleBin() {
+        // Also clean up any underlying files for file-type entries
+        recycleBinDao?.getAllOnce()?.forEach { item ->
+            if (item.itemType == "file") {
+                try {
+                    val patientFile = Gson().fromJson(item.itemData, PatientFile::class.java)
+                    deletePhysicalFile(patientFile.uri)
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Failed to parse PatientFile from recycle bin on clear", e)
+                }
+            }
+        }
+
         recycleBinDao?.deleteAll()
         AppLogger.d(TAG, "Cleared recycle bin")
+    }
+
+    /**
+     * Delete a single file (permanent, bypassing recycle bin)
+     */
+    open suspend fun delete(patientFile: PatientFile) {
+        // Remove DB record
+        patientFileDao.delete(patientFile)
+        // Remove physical file
+        deletePhysicalFile(patientFile.uri)
+        AppLogger.d(TAG, "Deleted file permanently: ${patientFile.fileName}")
     }
 
     /**

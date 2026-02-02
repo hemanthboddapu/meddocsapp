@@ -49,6 +49,7 @@ class PatientDetailActivity : AppCompatActivity() {
     private lateinit var fileAdapter: FileAdapter
     private var patient: Patient? = null
     private var currentPhotoUri: Uri? = null
+    private var currentPhotoFile: File? = null
 
     private val patientViewModel: PatientViewModel by viewModels {
         PatientViewModelFactory((application as MedDocsApplication).repository)
@@ -68,8 +69,67 @@ class PatientDetailActivity : AppCompatActivity() {
 
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            currentPhotoUri?.let { uri ->
-                copyFileToInternalStorage(uri)
+            // The image is already saved to the file by the camera
+            // We just need to register it in the database
+            currentPhotoFile?.let { file ->
+                if (file.exists() && file.length() > 0) {
+                    val patientFile = PatientFile(
+                        patientId = patient!!.id,
+                        uri = Uri.fromFile(file).toString(),
+                        mimeType = "image/jpeg",
+                        fileName = file.name,
+                        size = file.length(),
+                        createdAt = System.currentTimeMillis()
+                    )
+                    patientViewModel.insertFile(patientFile)
+                    Toast.makeText(this, "Photo saved", Toast.LENGTH_SHORT).show()
+                    AppLogger.d("PatientDetail", "Photo saved: ${file.absolutePath}, size: ${file.length()}")
+                } else {
+                    Toast.makeText(this, "Failed to save photo", Toast.LENGTH_SHORT).show()
+                    AppLogger.e("PatientDetail", "Photo file empty or doesn't exist: ${file.absolutePath}")
+                }
+            }
+        }
+        currentPhotoFile = null
+        currentPhotoUri = null
+    }
+
+    private val audioRecorderLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra("AUDIO_FILE_PATH")?.let { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    val patientFile = PatientFile(
+                        patientId = patient!!.id,
+                        uri = Uri.fromFile(file).toString(),
+                        mimeType = "audio/mp4",
+                        fileName = file.name,
+                        size = file.length(),
+                        createdAt = System.currentTimeMillis()
+                    )
+                    patientViewModel.insertFile(patientFile)
+                    Toast.makeText(this, "Audio saved", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private val textNoteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra("NOTE_FILE_PATH")?.let { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    val patientFile = PatientFile(
+                        patientId = patient!!.id,
+                        uri = Uri.fromFile(file).toString(),
+                        mimeType = "text/plain",
+                        fileName = file.name,
+                        size = file.length(),
+                        createdAt = System.currentTimeMillis()
+                    )
+                    patientViewModel.insertFile(patientFile)
+                    Toast.makeText(this, "Note saved", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -106,8 +166,9 @@ class PatientDetailActivity : AppCompatActivity() {
         }
         details += "Bed: ${patient!!.bedNumber} • ${patient!!.status}"
         patient!!.gender?.let { if (it.isNotEmpty()) details += "\nGender: $it" }
-        patient!!.dob?.let { if (it.isNotEmpty()) details += "\nDOB: $it" }
+        patient!!.dob?.let { if (it.isNotEmpty()) details += "\nDOB/Age: $it" }
         patient!!.problem?.let { if (it.isNotEmpty()) details += "\nProblem: $it" }
+        patient!!.tags?.let { if (it.isNotEmpty()) details += "\nTags: $it" }
         patientDetailsTextView.text = details
 
         fileAdapter = FileAdapter(
@@ -143,13 +204,116 @@ class PatientDetailActivity : AppCompatActivity() {
         }
 
         addFileFab.setOnClickListener {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "*/*"
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-            }
-            addFileLauncher.launch(intent)
+            showAddContentDialog()
         }
+    }
+
+    private fun showAddContentDialog() {
+        val options = arrayOf(
+            "📁 Browse Files",
+            "📷 Take Photo",
+            "🎤 Record Audio",
+            "📝 Add Text Note"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Add Content")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> browseFiles()
+                    1 -> takePhoto()
+                    2 -> recordAudio()
+                    3 -> addTextNote()
+                }
+            }
+            .show()
+    }
+
+    private fun browseFiles() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        }
+        addFileLauncher.launch(intent)
+    }
+
+    private fun takePhoto() {
+        // Check if camera is available
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        if (cameraIntent.resolveActivity(packageManager) == null) {
+            Toast.makeText(this, "No camera app available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Check camera permission
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
+            return
+        }
+
+        launchCamera()
+    }
+
+    private fun launchCamera() {
+        try {
+            val photoFile = createImageFile()
+            photoFile?.let {
+                currentPhotoFile = it  // Store the file reference
+                currentPhotoUri = FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.provider",
+                    it
+                )
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    putExtra(MediaStore.EXTRA_OUTPUT, currentPhotoUri)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+                takePictureLauncher.launch(intent)
+            } ?: run {
+                Toast.makeText(this, "Failed to create image file", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            AppLogger.e("PatientDetail", "Error launching camera", e)
+            Toast.makeText(this, "Error launching camera: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                launchCamera()
+            } else {
+                Toast.makeText(this, "Camera permission required to take photos", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun createImageFile(): File? {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "IMG_${timeStamp}.jpg"
+        return try {
+            File(filesDir, fileName)
+        } catch (e: IOException) {
+            AppLogger.e("PatientDetail", "Error creating image file", e)
+            null
+        }
+    }
+
+    private fun recordAudio() {
+        val intent = Intent(this, AudioRecorderActivity::class.java).apply {
+            putExtra("PATIENT_ID", patient?.id)
+            putExtra("PATIENT_NAME", patient?.name)
+        }
+        audioRecorderLauncher.launch(intent)
+    }
+
+    private fun addTextNote() {
+        val intent = Intent(this, TextNoteActivity::class.java).apply {
+            putExtra("PATIENT_ID", patient?.id)
+            putExtra("PATIENT_NAME", patient?.name)
+        }
+        textNoteLauncher.launch(intent)
     }
 
     private fun updateFilesEmptyState(isEmpty: Boolean) {
@@ -362,7 +526,7 @@ class PatientDetailActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_take_picture -> {
-                dispatchTakePictureIntent()
+                takePhoto()
                 true
             }
             R.id.action_compare -> {
@@ -377,38 +541,6 @@ class PatientDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun dispatchTakePictureIntent() {
-        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            takePictureIntent.resolveActivity(packageManager)?.also {
-                val photoFile: File? = try {
-                    createImageFile()
-                } catch (ex: IOException) {
-                    null
-                }
-                photoFile?.also {
-                    val photoURI: Uri = FileProvider.getUriForFile(
-                        this,
-                        "com.example.meddocsapp.provider",
-                        it
-                    )
-                    currentPhotoUri = photoURI
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-                    takePictureLauncher.launch(takePictureIntent)
-                }
-            }
-        }
-    }
-
-    @Throws(IOException::class)
-    private fun createImageFile(): File {
-        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        )
-    }
 
     private fun exportPatientData() {
         patient?.let { patient ->
@@ -552,5 +684,6 @@ class PatientDetailActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PATIENT = "com.example.meddocsapp.EXTRA_PATIENT"
+        private const val CAMERA_PERMISSION_REQUEST = 100
     }
 }

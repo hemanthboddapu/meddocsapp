@@ -8,6 +8,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@color/cardBackground"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp">
 
@@ -64,17 +65,6 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <!-- Quick Discharge Button -->
-        <ImageView
-            android:id="@+id/quick_discharge_button"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/ic_discharged"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Quick discharge"
-            android:visibility="gone"
-            android:padding="4dp" />
 
     </LinearLayout>
 
