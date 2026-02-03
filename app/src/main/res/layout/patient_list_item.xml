@@ -25,6 +25,8 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/avatar_default"
+            android:background="@drawable/circle_avatar_bg"
+            android:scaleType="centerCrop"
             android:contentDescription="Patient avatar" />
 
         <LinearLayout

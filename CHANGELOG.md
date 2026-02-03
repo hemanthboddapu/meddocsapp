@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.1] - 2026-02-03
+
+### Changed
+- Removed auto-restore on fresh install for predictability; restore is manual from Backup & Restore
+- Manual restore file picker now defaults to Documents (Documents/MedDocsBackups)
+- Backups are deferred on first launch until user decides to restore or continue
+- Skip creating backups when there are 0 attached files
+- SAF manual restore reliability improved (stream to temp, unified restore path)
+
+### Fixed
+- Avatar selection from numeric age strings (e.g., "2", "2y") now maps to correct age bucket
+- Duplicate drawable resources for avatars (PNG vs XML) removed to fix build
+
+---
+
+## [1.1.0] - 2026-02-03
+
+### Added
+
+#### Automatic Backup & Restore
+- **WorkManager Scheduled Backups**: Backups run automatically in the background via WorkManager
+- **Smart Scheduling**: Backups occur when device is charging and battery is not low
+- **Adjustable Frequency**: Daily, every 2 days, every 3 days, or weekly options
+- **SAF Integration**: Uses Storage Access Framework for persistent folder access across reinstalls
+- **Manual Restore from Any File**: Pick any backup ZIP from anywhere on your device to restore
+- **Public Storage**: Backups stored in Documents/MedDocsBackups for persistence
+- **No Password Required**: Simple, user-friendly backup without encryption complexity
+- **Full Data Backup**: Includes all patients, metadata, and attached files
+- **Backup Management**: View, share, and delete existing backups from the app
+- **Optimized Retention**: Keeps only the latest backup; older ones deleted automatically
+- **SAF Streaming Restore**: Restores backups via content resolver without raw file access
+- **Progress Indicator**: Visual feedback during backup/restore operations
+- **Merge or Replace**: Choose to add backup data to existing or replace all data
+- **Lazy Metadata Loading**: Backup list loads instantly; metadata fetched on-demand
+
+#### UI Improvements
+- **Bed Number Field**: Defaults to numeric keyboard with toggle icon to switch to text mode
+- **Privacy Note**: Subtle one-line reminder on dashboard that data is stored locally
+- **Manual Restore Button**: Dedicated button in Backup screen to pick and restore any ZIP file
+
+---
+
 ## [1.0.0] - 2026-02-02
 
 ### Added
@@ -112,7 +154,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Customizable Retention**: Allow users to configure recycle bin retention period
 - **Database Encryption**: Optional SQLCipher encryption for sensitive data
 - **Biometric Lock**: Optional app lock with fingerprint/face unlock
-- **Cloud Backup**: Optional backup to cloud storage
+- **Cloud Backup**: Optional integration with Google Drive or other cloud storage
 
 ### Known Issues
 - Large file imports may be slow on older devices
@@ -124,6 +166,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.1.1 | 2026-02-03 | Removed auto-restore, improved manual restore, various fixes |
+| 1.1.0 | 2026-02-03 | Added encrypted backup & restore feature |
 | 1.0.0 | 2026-02-02 | Initial release with full feature set |
 
 ---

@@ -52,17 +52,22 @@
 
             <!-- Bed Number (Required) -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/bed_number_input_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:hint="Bed Number *"
+                app:helperText="Tap input type icon to switch between numeric/text"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_edit"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/bed_number_edit_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text" />
+                    android:inputType="number"
+                    android:digits="0123456789- /" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Row: Gender + Age/DOB -->

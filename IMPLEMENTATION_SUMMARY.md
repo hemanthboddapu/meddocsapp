@@ -86,6 +86,27 @@ This document provides a complete overview of all implemented features, bug fixe
 | Export Logs | ✅ Done | `AppLogger.kt` |
 | Clear Logs | ✅ Done | `AppLogger.kt` |
 
+### Automatic Backup & Restore
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| WorkManager Background Scheduling | ✅ Done | `BackupWorker.kt`, `MedDocsApplication.kt` |
+| Smart Constraints (Charging + Battery) | ✅ Done | `MedDocsApplication.kt` |
+| Automatic Scheduled Backups | ✅ Done | `BackupManager.kt`, `MedDocsApplication.kt` |
+| Adjustable Frequency | ✅ Done | `BackupActivity.kt` (Daily/2 days/3 days/Weekly) |
+| SAF Integration | ✅ Done | `BackupManager.kt`, `HomeActivity.kt` |
+| Auto-Restore on Fresh Install | ✅ Done | `HomeActivity.kt`, `BackupManager.kt` |
+| Manual Restore from Any File | ✅ Done | `BackupActivity.kt` |
+| SAF Streaming Restore | ✅ Done | `BackupManager.kt` (`restoreBackupFromSaf`) |
+| Full Data Backup | ✅ Done | `BackupManager.kt` |
+| Restore from Backup | ✅ Done | `BackupManager.kt` |
+| Backup Management UI | ✅ Done | `BackupActivity.kt`, `activity_backup.xml` |
+| Share Backups | ✅ Done | `BackupActivity.kt` |
+| Delete Backups | ✅ Done | `BackupManager.kt` |
+| Single Backup Retention | ✅ Done | `BackupManager.kt` (keeps only latest) |
+| Lazy Metadata Loading | ✅ Done | `BackupActivity.kt` |
+| Public Storage (Documents) | ✅ Done | `BackupManager.kt` |
+
 ---
 
 ## ✅ Bug Fixes Completed
@@ -116,16 +137,20 @@ This document provides a complete overview of all implemented features, bug fixe
 ### Kotlin Classes
 - `AppLogger.kt` - Centralized logging utility
 - `AvatarHelper.kt` - Avatar selection by age/gender
+- `BackupActivity.kt` - Encrypted backup creation and restoration UI
+- `BackupManager.kt` - AES-256 encrypted backup logic using Zip4j
 - `DeveloperSettingsActivity.kt` - Developer settings screen
 - `RecycleBinActivity.kt` - Recycle bin management
 - `RecycleBinDao.kt` - Recycle bin database operations
 - `RecycleBinItem.kt` - Recycle bin entity
 
 ### Layouts
+- `activity_backup.xml`
 - `activity_developer_settings.xml`
 - `activity_recycle_bin.xml`
 - `dialog_image_picker.xml`
 - `dialog_log_viewer.xml`
+- `item_backup.xml`
 - `item_image_picker.xml`
 - `item_recent_patient.xml`
 - `item_recycle_bin.xml`
@@ -331,9 +356,12 @@ app/build/outputs/apk/debug/app-debug.apk
 - [ ] Dashboard file size display
 - [ ] Customizable recycle bin retention period
 
+### Completed (v1.1.0)
+- [x] Encrypted local backup & restore (AES-256)
+
 ### Potential
 - [ ] Database encryption (SQLCipher)
 - [ ] Biometric app lock
-- [ ] Cloud backup integration
+- [ ] Cloud backup integration (Google Drive, etc.)
 - [ ] Export to PDF report
 - [ ] Multi-language support

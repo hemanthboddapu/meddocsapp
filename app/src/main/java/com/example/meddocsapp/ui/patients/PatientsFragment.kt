@@ -454,7 +454,11 @@ class PatientsFragment : Fragment() {
                 detailsTextView.text = details
 
                 // Set avatar based on gender and age
-                avatarImage.setImageResource(AvatarHelper.getAvatarResource(patient.gender, patient.dob))
+                val avatarRes = AvatarHelper.getAvatarResource(patient.gender, patient.dob)
+                com.bumptech.glide.Glide.with(itemView.context)
+                    .load(avatarRes)
+                    .circleCrop()
+                    .into(avatarImage)
 
                 // Set status badge
                 statusBadge.text = patient.status

@@ -85,23 +85,32 @@ object AvatarHelper {
     private fun calculateAge(dob: String?): Int? {
         if (dob.isNullOrBlank()) return null
 
+        val trimmed = dob.trim()
+        // Try to extract an integer age from the string (handles '2', '02', '2y', '2 years', etc.)
+        val numberMatch = Regex("\\b(\\d{1,3})\\b").find(trimmed)
+        if (numberMatch != null) {
+            val ageStr = numberMatch.groupValues[1]
+            try {
+                val ageVal = ageStr.toInt()
+                if (ageVal in 0..130) return ageVal
+            } catch (_: NumberFormatException) {
+                // fall through to date parsing
+            }
+        }
+
+        // Otherwise, parse as a date in dd/MM/yyyy format
         return try {
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val birthDate = dateFormat.parse(dob) ?: return null
-
+            val birthDate = dateFormat.parse(trimmed) ?: return null
             val birthCalendar = Calendar.getInstance().apply { time = birthDate }
             val today = Calendar.getInstance()
-
             var age = today.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR)
-
             if (today.get(Calendar.DAY_OF_YEAR) < birthCalendar.get(Calendar.DAY_OF_YEAR)) {
                 age--
             }
-
             age
         } catch (e: Exception) {
             null
         }
     }
 }
-

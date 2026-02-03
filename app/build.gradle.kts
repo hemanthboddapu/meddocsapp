@@ -39,6 +39,15 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    packagingOptions {
+        resources {
+            excludes += listOf(
+                "**/avatar_default.xml",
+                "**/avatar_male_*.xml",
+                "**/avatar_female_*.xml"
+            )
+        }
+    }
 }
 
 dependencies {
@@ -71,4 +80,9 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+
+    // WorkManager for background backups
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

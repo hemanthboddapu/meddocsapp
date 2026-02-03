@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_backup"
+        android:icon="@drawable/ic_backup"
+        android:title="Backup &amp; Restore"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_recycle_bin"
         android:icon="@drawable/ic_delete"
         android:title="Recycle Bin"

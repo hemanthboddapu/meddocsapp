@@ -1,5 +1,6 @@
 package com.example.meddocsapp
 
+import android.content.Context
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -9,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.mock
 
 /**
  * Unit tests for PatientRepository
@@ -17,13 +19,15 @@ class PatientRepositoryTest {
 
     private lateinit var fakePatientDao: FakePatientDao
     private lateinit var fakePatientFileDao: FakePatientFileDao
+    private lateinit var mockContext: Context
     private lateinit var repository: PatientRepository
 
     @Before
     fun setup() {
         fakePatientDao = FakePatientDao()
         fakePatientFileDao = FakePatientFileDao()
-        repository = PatientRepository(fakePatientDao, fakePatientFileDao)
+        mockContext = mock()
+        repository = PatientRepository(fakePatientDao, fakePatientFileDao, mockContext)
     }
 
     @Test

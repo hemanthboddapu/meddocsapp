@@ -11,6 +11,7 @@ A complete guide to using the MedDocs app for managing patient records and medic
 - [Managing Files](#managing-files)
 - [Image Comparison](#image-comparison)
 - [Sharing Files](#sharing-files)
+- [Backup & Restore](#backup--restore)
 - [Recycle Bin](#recycle-bin)
 - [Search & Filter](#search--filter)
 - [Developer Mode](#developer-mode)
@@ -196,6 +197,70 @@ When you share a file (image, PDF, etc.) from another app to MedDocs:
    - Patient Name
    - Bed Number
    - Patient ID (if set)
+
+---
+
+## Backup & Restore
+
+MedDocs automatically backs up your data so you never lose your patient records. No passwords or technical knowledge required!
+
+### Automatic Backups
+
+Backups happen automatically in the background based on your settings:
+- **Daily** (default): Backup every 24 hours
+- **Every 2 days**: Backup every 48 hours
+- **Every 3 days**: Backup every 72 hours
+- **Weekly**: Backup every 7 days
+
+Backups run when your device is charging and battery is not low. The app keeps only the latest backup to save storage space. Backups are deferred on the very first launch until you decide to restore or start using the app.
+
+### Configuring Automatic Backups
+
+1. Go to **Dashboard**
+2. Tap the menu (⋮)
+3. Select **Backup & Restore**
+4. Toggle **Automatic Backup** on/off
+5. Choose your preferred frequency
+
+### Creating a Manual Backup
+
+1. Go to **Dashboard** → Menu (⋮) → **Backup & Restore**
+2. Tap **Backup Now**
+3. Wait for the backup to complete
+4. Optionally share the backup file
+
+Note: If there are 0 attached files, the app will skip creating a backup.
+
+### Restoring from Backup (Manual Only)
+
+1. Go to **Dashboard** → Menu (⋮) → **Backup & Restore**
+2. Tap **Restore from Backup File**
+3. The picker opens in **Documents/** by default — select your backup from `Documents/MedDocsBackups`
+4. Confirm to restore — this will replace all current data
+
+You can also tap a listed backup in the "Your Backups" section to restore from it.
+
+### Backup Location
+
+Backups are stored in:
+```
+Documents/MedDocsBackups/
+```
+
+This location persists across app reinstalls. Use the manual restore flow to recover data on a fresh install.
+
+### What's Included in a Backup
+
+- All patient records (name, bed number, status, dates, etc.)
+- All attached files (images, documents, audio, etc.)
+- File metadata (names, types, creation dates)
+
+### Tips
+
+- **Only one backup is kept**: When you create a new backup, the old one is automatically deleted to save space
+- **Share backups to cloud storage**: For extra safety, share backups to Google Drive or email
+- **Manual restore works from anywhere**: You can restore from any backup ZIP file on your device
+- **Background backups**: Leave your device charging overnight; backups will run automatically
 
 ---
 

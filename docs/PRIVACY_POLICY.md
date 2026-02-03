@@ -57,7 +57,19 @@ We do NOT collect:
 - No internet connection required for core functionality
 - Data exists only on the device where it was created
 
-### 4.3 Data Isolation
+### 4.3 Automatic Local Backups
+
+- Backups are created automatically on a user-defined schedule via WorkManager
+- Backups run in the background when device is charging and battery is not low
+- Backups are stored locally in public Documents/MedDocsBackups directory
+- Restore is manual from the Backup & Restore screen; auto-restore on fresh install is not performed
+- On first launch, backups are deferred until the user chooses to restore or proceed
+- No passwords or encryption keys required (user-friendly design)
+- Backup files are ZIP archives with Base64-encoded metadata
+- Users have full control over backup creation, frequency, sharing, and deletion
+- Only the latest backup is kept; older backups are automatically deleted
+
+### 4.4 Data Isolation
 
 - Each installation is completely independent
 - No data sharing between devices
@@ -210,4 +222,3 @@ For questions about this Privacy Policy or data practices:
 ---
 
 *This privacy policy is also accessible within the app via Menu → Privacy Policy.*
-

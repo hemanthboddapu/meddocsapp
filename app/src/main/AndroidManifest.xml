@@ -83,6 +83,11 @@
             android:parentActivityName=".HomeActivity"
             android:theme="@style/Theme.Meddocsapp.NoActionBar" />
 
+        <activity
+            android:name=".BackupActivity"
+            android:parentActivityName=".HomeActivity"
+            android:theme="@style/Theme.Meddocsapp.NoActionBar" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

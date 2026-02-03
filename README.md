@@ -90,6 +90,21 @@ A comprehensive Android application for managing patient records and associated 
 - **GDPR/HIPAA Aligned**: Designed with privacy-by-design principles
 - **User Control**: Full ownership and control of all data
 
+### Automatic Backup & Restore
+- **Automatic Scheduled Backups**: Backups run automatically in the background via WorkManager (daily by default)
+- **Background Scheduling**: Backups occur when device is charging and battery is not low
+- **Adjustable Frequency**: Choose daily, every 2 days, every 3 days, or weekly
+- **Manual Restore Only**: Restore is user-initiated from Backup & Restore; auto-restore on fresh install has been removed for predictability
+- **Picker Defaults to Documents**: Manual restore file picker opens in Documents/ so you can quickly pick from Documents/MedDocsBackups
+- **SAF Integration**: Uses Storage Access Framework for robust access to backups
+- **No Password Required**: Simple, user-friendly backup without encryption keys
+- **Full Data Backup**: Includes all patients, metadata, and attached files
+- **Backup Management**: View, share, and delete existing backups
+- **Smart Cleanup**: Automatically keeps only the latest backup (older ones deleted)
+- **Zero-File Guard**: Skips creating a backup when there are 0 attached files
+- **First-Launch Deferral**: Backups are deferred on first launch until you decide to restore or start using the app
+- **Public Storage**: Backups stored in Documents/MedDocsBackups for persistence across reinstalls
+
 ## How It Works
 
 ### Data Flow
@@ -139,6 +154,8 @@ app/
 │   │   ├── AppDatabase.kt               # Room database with migrations
 │   │   ├── AppLogger.kt                 # Centralized logging utility
 │   │   ├── AvatarHelper.kt              # Avatar selection by age/gender
+│   │   ├── BackupActivity.kt            # Backup & restore UI
+│   │   ├── BackupManager.kt             # Encrypted backup logic
 │   │   ├── DashboardActivity.kt         # Dashboard screen
 │   │   ├── DeveloperSettingsActivity.kt # Developer mode settings
 │   │   ├── HomeActivity.kt              # Main entry with navigation

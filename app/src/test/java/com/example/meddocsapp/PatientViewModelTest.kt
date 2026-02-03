@@ -1,5 +1,6 @@
 package com.example.meddocsapp
 
+import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.mock
 
 /**
  * Unit tests for PatientViewModel
@@ -21,6 +23,7 @@ class PatientViewModelTest {
 
     private lateinit var fakePatientDao: FakePatientDao
     private lateinit var fakePatientFileDao: FakePatientFileDao
+    private lateinit var mockContext: Context
     private lateinit var repository: PatientRepository
     private lateinit var viewModel: PatientViewModel
 
@@ -28,7 +31,8 @@ class PatientViewModelTest {
     fun setup() {
         fakePatientDao = FakePatientDao()
         fakePatientFileDao = FakePatientFileDao()
-        repository = PatientRepository(fakePatientDao, fakePatientFileDao)
+        mockContext = mock()
+        repository = PatientRepository(fakePatientDao, fakePatientFileDao, mockContext)
         viewModel = PatientViewModel(repository)
     }
 

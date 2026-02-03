@@ -37,6 +37,7 @@ class AddEditPatientActivity : AppCompatActivity() {
     private lateinit var admissionDateEditText: EditText
     private lateinit var tagsEditText: EditText
     private lateinit var savePatientButton: Button
+    private lateinit var bedNumberInputLayout: com.google.android.material.textfield.TextInputLayout
 
     private var existingPatient: Patient? = null
     private var selectedAdmissionDate: Long? = null
@@ -51,6 +52,7 @@ class AddEditPatientActivity : AppCompatActivity() {
 
         setupToolbar()
         initViews()
+        setupBedNumberToggle()
         setupDropdowns()
         setupDatePickers()
         setupAgeCalculation()
@@ -77,6 +79,23 @@ class AddEditPatientActivity : AppCompatActivity() {
         admissionDateEditText = findViewById(R.id.admission_date_edit_text)
         tagsEditText = findViewById(R.id.tags_edit_text)
         savePatientButton = findViewById(R.id.save_patient_button)
+        bedNumberInputLayout = findViewById(R.id.bed_number_input_layout)
+    }
+
+    private fun setupBedNumberToggle() {
+        // Toggle between numeric and text input types via end icon
+        bedNumberInputLayout.setEndIconOnClickListener {
+            val isNumeric = bedNumberEditText.inputType and android.text.InputType.TYPE_CLASS_NUMBER == android.text.InputType.TYPE_CLASS_NUMBER
+            if (isNumeric) {
+                bedNumberEditText.inputType = android.text.InputType.TYPE_CLASS_TEXT
+                bedNumberEditText.setSelection(bedNumberEditText.text?.length ?: 0)
+                bedNumberInputLayout.helperText = "Text mode"
+            } else {
+                bedNumberEditText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                bedNumberEditText.setSelection(bedNumberEditText.text?.length ?: 0)
+                bedNumberInputLayout.helperText = "Numeric mode"
+            }
+        }
     }
 
     private fun setupDropdowns() {

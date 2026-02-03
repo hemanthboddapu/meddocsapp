@@ -216,6 +216,7 @@ data class RecycleBinItem(
 | `ImageViewActivity` | Fullscreen image viewer with PhotoView |
 | `ShareActivity` | Receive shared files from other apps |
 | `RecycleBinActivity` | Manage deleted items |
+| `BackupActivity` | Encrypted backup creation and restoration |
 | `DeveloperSettingsActivity` | Developer mode and log management |
 
 ## Navigation

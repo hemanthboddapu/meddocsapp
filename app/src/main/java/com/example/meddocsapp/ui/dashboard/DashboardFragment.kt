@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.meddocsapp.AppLogger
+import com.example.meddocsapp.BackupActivity
 import com.example.meddocsapp.DeveloperSettingsActivity
 import com.example.meddocsapp.MedDocsApplication
 import com.example.meddocsapp.Patient
@@ -131,6 +132,10 @@ class DashboardFragment : Fragment() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_backup -> {
+                startActivity(Intent(requireContext(), BackupActivity::class.java))
+                true
+            }
             R.id.action_recycle_bin -> {
                 startActivity(Intent(requireContext(), RecycleBinActivity::class.java))
                 true
